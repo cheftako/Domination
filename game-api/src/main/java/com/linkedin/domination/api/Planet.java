@@ -3,14 +3,14 @@ package com.linkedin.domination.api;
 /**
  * A basic immutable planet class.
  */
-public class Planet {
-
-    public final int x;
-    public final int y;
-    public final int id;
-    public final int owner;
-    public final int population;
-    public final Size size;
+public class Planet
+{
+    private final int x;
+    private final int y;
+    private final int id;
+    private final int owner;
+    private final int population;
+    private final Size size;
 
     public Planet(int x, int y, int id, int owner, int population, Size size) {
         this.x = x;
@@ -19,5 +19,29 @@ public class Planet {
         this.owner = owner;
         this.population = population;
         this.size = size;
+    }
+
+    public int getX() {
+        return x;
+    }
+
+    public int getY() {
+        return y;
+    }
+
+    public int getId() {
+        return id;
+    }
+
+    public int getOwner() {
+        return owner;
+    }
+
+    public int getPopulation() {
+        return population;
+    }
+
+    public Size getSize() {
+        return size;
     }
 }

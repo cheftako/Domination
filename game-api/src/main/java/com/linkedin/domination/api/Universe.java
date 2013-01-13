@@ -25,8 +25,8 @@ public class Universe {
             return 0;
         }
 
-        int a = Math.abs(first.x - second.x);
-        int b = Math.abs(first.y - second.y);
+        int a = Math.abs(first.getX() - second.getX());
+        int b = Math.abs(first.getY() - second.getY());
         double c2 = a * a + b * b;
 
         int c = (int) Math.sqrt(c2);
@@ -39,7 +39,7 @@ public class Universe {
         {
             return 0;
         }
-        return getTimeToTravel(planetOne.id, planetTwo.id);
+        return getTimeToTravel(planetOne.getId(), planetTwo.getId());
     }
 
     public Map<Integer, Planet> getPlanetMap()

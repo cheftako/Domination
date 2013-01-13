@@ -1,6 +1,10 @@
 package com.linkedin.domination.api;
 
+import java.util.List;
+
 interface Player
 {
-  long getMove(String example);
+  void initialize(Universe start);
+
+  List<Move> makeMove(List<Event> events);
 }
