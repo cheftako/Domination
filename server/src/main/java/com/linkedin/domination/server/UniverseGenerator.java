@@ -18,12 +18,12 @@ public class UniverseGenerator {
     private int _height;
     private int _playerStartSize;
 
-    public UniverseGenerator(int size, int width, int height, int playerStartSize) {
+    public UniverseGenerator(int numberOfPlanets, int width, int height, int shipsPerPlayer) {
         _random = new Random();
-        _size = size;
+        _size = numberOfPlanets;
         _width = width;
         _height = height;
-        _playerStartSize = playerStartSize;
+        _playerStartSize = shipsPerPlayer;
     }
 
     public Universe createUniverse()
