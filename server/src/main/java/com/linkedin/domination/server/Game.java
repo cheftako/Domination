@@ -251,7 +251,8 @@ public class Game {
                     {
                         if (fleet != otherFleet)
                         {
-                            size = size - (otherFleet.getSize() / battleSplit);
+                            // We have to round up so that something gets destroyed.
+                            size = size - (int)(Math.ceil(otherFleet.getSize() / (double)battleSplit));
                         }
                     }
 
