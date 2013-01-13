@@ -25,7 +25,11 @@ public class Game {
         this._turnNumber = 0;
 
         this._playerIds = new HashMap<Player, Integer>(_players.size());
-
+        for (Integer playerId : players.keySet())
+        {
+            Player player = players.get(playerId);
+            _playerIds.put(player, playerId);
+        }
     }
 
     public Universe start()
@@ -34,13 +38,15 @@ public class Game {
 
         while(!isOver())
         {
+            System.out.print(".");
             List<Event> thisTurnEvents = new ArrayList<Event>();
             Map<Planet, List<Fleet>> conflictMap = new HashMap<Planet, List<Fleet>>();
 
             // Get user commands
             for(Player player : _players.values())
             {
-                List<Move> playerMoves = player.makeMove(makeUniverseForPlayer(_playerIds.get(player)), lastTurnEvents);
+                Universe playerUniverse = makeUniverseForPlayer(_playerIds.get(player));
+                List<Move> playerMoves = player.makeMove(playerUniverse, lastTurnEvents);
                 List<Fleet> playerFleets = getFleetsForPlayer(player, playerMoves);
                 _currentFleets.addAll(playerFleets);
                 List<Event> playerEvents = getEventsForFleets(playerFleets);

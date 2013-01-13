@@ -3,6 +3,9 @@ package com.linkedin.domination.server;
 import com.linkedin.domination.api.Universe;
 import com.linkedin.domination.api.Player;
 
+import java.util.HashMap;
+import java.util.Map;
+
 /**
  * Created with IntelliJ IDEA.
  * User: cmiller
@@ -175,16 +178,16 @@ public class Server
         return three;
     }
 
-    private static Long getNumberTurns(String[] args)
+    private static Integer getNumberTurns(String[] args)
     {
         for (int i = 0; i < args.length; i++)
         {
             if (args[i].equals("-n"))
             {
-                return Long.parseLong(args[i + 1]);
+                return Integer.parseInt(args[i + 1]);
             }
         }
-        return new Long(1000);
+        return new Integer(1000);
     }
 
     public static void main(String[] args)
@@ -209,8 +212,16 @@ public class Server
         System.out.println(playerTwo.toString());
         System.out.println(playerThree.toString());
 
-        long numberTurns = getNumberTurns(args);
-        // TODO: Start running an actual game
+        int numberTurns = getNumberTurns(args);
+
+        Map<Integer, Player> playerMap = new HashMap<Integer, Player>();
+        playerMap.put(1, playerOne);
+        playerMap.put(2, playerTwo);
+        playerMap.put(3, playerThree);
+        Game game = new Game(universe, playerMap, numberTurns);
+        universe = game.start();
+
+        System.out.println(universe);
     }
 
 }
