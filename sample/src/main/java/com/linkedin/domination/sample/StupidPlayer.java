@@ -23,6 +23,7 @@ public class StupidPlayer implements Player
     @Override
     public void initialize(Integer playerNbr) {
         me = playerNbr;
+        System.out.println("Stupid player is player " + me);
     }
 
     @Override
@@ -65,7 +66,7 @@ public class StupidPlayer implements Player
         List<Planet> targetPlanets = new ArrayList<Planet>();
         for(Planet planet : universe.getPlanets())
         {
-            if (planet.getId() != me)
+            if (planet.getOwner() != me)
             {
                 targetPlanets.add(planet);
             }
@@ -77,7 +78,7 @@ public class StupidPlayer implements Player
         List<Planet> myPlanets = new ArrayList<Planet>();
         for(Planet planet : universe.getPlanets())
         {
-            if (planet.getId() == me)
+            if (planet.getOwner() == me)
             {
                 myPlanets.add(planet);
             }

@@ -77,6 +77,7 @@ public class Game {
             }
 
             List<Event> combatEvents = combat(conflictMap);
+            printCombatEvents(combatEvents);
             thisTurnEvents.addAll(combatEvents);
 
             // Growth
@@ -87,6 +88,16 @@ public class Game {
         }
 
         return _universe;
+    }
+
+    private void printCombatEvents(List<Event> combatEvents)
+    {
+        for(Event event : combatEvents)
+        {
+            LandingEvent landing = (LandingEvent) event;
+            System.out.println("[" + _turnNumber + "] Player " + landing.getFleetOwner() + " landed " + landing.getSentShipCount() +
+            " ships on planet " + landing.getToPlanet() + " and ended up with " + landing.getAfterBattleShipCount() + " ships");
+        }
     }
 
     private void grow()
