@@ -67,7 +67,7 @@ public class Game {
                         _universe.getPlanetMap().put(updated.getId(), updated);
                     } else {
                         // combat setup
-                        Planet conflictPlanet = _universe.getPlanetMap().get(fleet.get_destination().getId());
+                        Planet conflictPlanet = _universe.getPlanetMap().get(fleet.get_destination());
                         List<Fleet> conflict = conflictMap.containsKey(conflictPlanet) ? conflictMap.get(conflictPlanet) : new ArrayList<Fleet>();
                         conflict.add(fleet);
                         conflictMap.put(conflictPlanet, conflict);
