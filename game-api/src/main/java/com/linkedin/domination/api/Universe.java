@@ -25,8 +25,8 @@ public class Universe {
             return 0;
         }
 
-        int a =first.x - second.x;
-        int b = first.y - second.y;
+        int a =first.getX() - second.getX();
+        int b = first.getY() - second.getY();
         double c2 = a * a + b * b;
         int c = (int) Math.sqrt(c2);
         return c / 10 + 1;
