@@ -16,14 +16,22 @@ public class LandingEvent implements Event {
     private int _shipSentCount;
     private int _shipRemainingCount;
     private List<Integer> _playersInvolved;
+    private int _owner;
 
-    public LandingEvent(int _origin, int _destination, Size _size, int shipsSent, int shipsRemaining, List<Integer> playersInvolved) {
+    public LandingEvent(int _origin,
+                        int _destination,
+                        Size _size,
+                        int shipsSent,
+                        int shipsRemaining,
+                        List<Integer> playersInvolved,
+                        int owner) {
         this._origin = _origin;
         this._destination = _destination;
         this._size = _size;
         this._shipSentCount = shipsSent;
         this._shipRemainingCount = shipsRemaining;
         this._playersInvolved = playersInvolved;
+        this._owner = owner;
     }
 
     @Override
@@ -44,6 +52,11 @@ public class LandingEvent implements Event {
     @Override
     public Size getFleetSize() {
         return _size;
+    }
+
+    @Override
+    public int getFleetOwner() {
+        return _owner;
     }
 
     @Override

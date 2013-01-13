@@ -11,11 +11,13 @@ public class LaunchEvent implements Event {
     private final Integer _origin;
     private final Integer _destination;
     private final Size _size;
+    private final int _owner;
 
-    public LaunchEvent(Integer _origin, Integer _destination, Size _size) {
+    public LaunchEvent(Integer _origin, Integer _destination, Size _size, int owner) {
         this._origin = _origin;
         this._destination = _destination;
         this._size = _size;
+        this._owner = owner;
     }
 
     @Override
@@ -36,6 +38,11 @@ public class LaunchEvent implements Event {
     @Override
     public Size getFleetSize() {
         return _size;
+    }
+
+    @Override
+    public int getFleetOwner() {
+        return _owner;
     }
 
     @Override

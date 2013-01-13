@@ -4,7 +4,7 @@ import java.util.List;
 
 public interface Player
 {
-  void initialize(Universe start);
+  public void initialize(Integer playerNbr);
 
-  List<Move> makeMove(List<Event> events);
+  public List<Move> makeMove(Universe universe, List<Event> events);
 }

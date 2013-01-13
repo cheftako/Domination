@@ -154,24 +154,24 @@ public class Server
         return universe;
     }
 
-    private static Player getPlayerOne(String[] args, Universe universe)
+    private static Player getPlayerOne(String[] args)
     {
         Player one = getPlayer(args, "-p1");
-        one.initialize(playersUniverse(1, universe));
+        one.initialize(1);
         return one;
     }
 
-    private static Player getPlayerTwo(String[] args, Universe universe)
+    private static Player getPlayerTwo(String[] args)
     {
         Player two = getPlayer(args, "-p2");
-        two.initialize(playersUniverse(2, universe));
+        two.initialize(2);
         return two;
     }
 
-    private static Player getPlayerThree(String[] args, Universe universe)
+    private static Player getPlayerThree(String[] args)
     {
         Player three = getPlayer(args, "-p3");
-        three.initialize(playersUniverse(3, universe));
+        three.initialize(3);
         return three;
     }
 
@@ -201,9 +201,9 @@ public class Server
         Universe universe = generator.createUniverse();
         System.out.println(universe.toString());
 
-        Player playerOne = getPlayerOne(args, universe);
-        Player playerTwo = getPlayerTwo(args, universe);
-        Player playerThree = getPlayerThree(args, universe);
+        Player playerOne = getPlayerOne(args);
+        Player playerTwo = getPlayerTwo(args);
+        Player playerThree = getPlayerThree(args);
 
         System.out.println(playerOne.toString());
         System.out.println(playerTwo.toString());

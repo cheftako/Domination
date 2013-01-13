@@ -40,7 +40,8 @@ public class Game {
             // Get user commands
             for(Player player : _players.values())
             {
-                List<Move> playerMoves = player.makeMove(lastTurnEvents);
+                //TODO DO NOT SEND NULL TO THE PLAYER
+                List<Move> playerMoves = player.makeMove(null, lastTurnEvents);
                 List<Fleet> playerFleets = getFleetsForPlayer(player, playerMoves);
                 _currentFleets.addAll(playerFleets);
                 List<Event> playerEvents = getEventsForFleets(playerFleets);
@@ -142,7 +143,8 @@ public class Game {
                         Size.getSizeForNumber(fleet.getSize()),
                         fleet.getSize(),
                         fleet.getSize(),
-                        playersInvolved
+                        playersInvolved,
+                        fleet.getOwner()
                         );
                 battleEvents.put(fleet, landing);
             }
@@ -239,7 +241,8 @@ public class Game {
         {
             LaunchEvent event = new LaunchEvent(fleet.get_origin().getId(),
                     fleet.get_destination().getId(),
-                    Size.getSizeForNumber(fleet.getSize()));
+                    Size.getSizeForNumber(fleet.getSize()),
+                    fleet.getOwner());
             launchEvents.add(event);
         }
         return launchEvents;

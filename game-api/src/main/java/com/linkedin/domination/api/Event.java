@@ -20,6 +20,8 @@ public interface Event
     public Integer getToPlanet();
     public Size getFleetSize();
 
+    public int getFleetOwner();
+
     public int getSentShipCount();
     public int getAfterBattleShipCount();
 }
