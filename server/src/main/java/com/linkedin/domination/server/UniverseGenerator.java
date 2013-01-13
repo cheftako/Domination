@@ -7,9 +7,10 @@ import com.linkedin.domination.api.Universe;
 import java.util.*;
 
 /**
- * Generate a random world.
+ * Generate a random universe. Planets are set to be at least 2 moves from each other. The northern most planet
+ * is claimed by player 1. The south west is claimed by player 2. The south east is claimed by player 3.
  */
-public class WorldGenerator {
+public class UniverseGenerator {
 
     private Random _random;
     private int _size;
@@ -17,7 +18,7 @@ public class WorldGenerator {
     private int _height;
     private int _playerStartSize;
 
-    public WorldGenerator(int size, int width, int height, int playerStartSize) {
+    public UniverseGenerator(int size, int width, int height, int playerStartSize) {
         _random = new Random();
         _size = size;
         _width = width;
