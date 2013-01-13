@@ -3,6 +3,7 @@ package com.linkedin.domination.sample;
 import com.linkedin.domination.api.*;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Random;
 
@@ -33,12 +34,30 @@ public class StupidPlayer implements Player
         for(Planet planet : myPlanets) {
             if(planet.getSize().equals(Size.LARGE))
             {
-                Move attack = new Move(planet, targets.get(random.nextInt(targets.size())), Move.FleetType.RAIDING);
+                Move attack = new Move(planet, getClosestPlanet(planet, targets), Move.FleetType.RAIDING);
                 myMoves.add(attack);
             }
         }
 
         return myMoves;
+    }
+
+    private Planet getClosestPlanet(Planet ideal, Collection<Planet> planets)
+    {
+        Planet closest = null;
+        int nearestDistance = Integer.MAX_VALUE;
+
+        for(Planet planet : planets)
+        {
+            int distanceFromIdeal = Universe.getTimeToTravel(planet, ideal);
+            if (distanceFromIdeal < nearestDistance)
+            {
+                nearestDistance = distanceFromIdeal;
+                closest = planet;
+            }
+        }
+
+        return closest;
     }
 
     private List<Planet> getTargetPlanets(Universe universe)
