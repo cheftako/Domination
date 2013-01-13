@@ -48,22 +48,25 @@ public class SamplePlayer implements Player
             {
                 // This client isn't bright enough to worry about this.
                 // Just check to see if its a recent landing of ours.
-                if (event.getFleetOwner() == _me && target.getOwner() == _me)
+                if (event.getFleetOwner() == _me)
                 {
-                    // Recent conquest so check its safe and clear any state
                     if (_targets.contains(targetId))
                     {
                         _targets.remove(targetId);
                     }
-                    if (_flee.contains(targetId))
+                    if (target.getOwner() == _me)
                     {
-                        Integer newHome = getTarget(universe, target, result);
-                        _flee.remove(targetId);
-                        if (newHome != null)
+                        // Recent conquest so check its safe and clear any state
+                        if (_flee.contains(targetId))
                         {
-                            Move flee = new Move(targetId, newHome, Move.FleetType.HORDE);
-                            result.add(flee);
-                            _targets.add(newHome);
+                            Integer newHome = getTarget(universe, target, result);
+                            _flee.remove(targetId);
+                            if (newHome != null)
+                            {
+                                Move flee = new Move(targetId, newHome, Move.FleetType.HORDE);
+                                result.add(flee);
+                                _targets.add(newHome);
+                            }
                         }
                     }
                 }
