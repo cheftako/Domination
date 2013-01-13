@@ -62,7 +62,7 @@ public class Game {
                 if(fleet.hasArrived())
                 {
                     if(isFleetAtFriendlyPlanet(fleet)) {
-                        Planet friendlyPlanet = _universe.getPlanetMap().get(fleet.get_destination().getId());
+                        Planet friendlyPlanet = _universe.getPlanetMap().get(fleet.get_destination());
                         Planet updated = makePlanetWithNewOwnerAndSize(friendlyPlanet, fleet.getOwner(), friendlyPlanet.getPopulation() + fleet.getSize());
                         _universe.getPlanetMap().put(updated.getId(), updated);
                     } else {
@@ -200,7 +200,7 @@ public class Game {
             List<Fleet> fleetsInvolved = condenseFleets(rawFleets);
 
             int battleSplit = fleetsInvolved.size(); // size before adding planet
-            Fleet planetFleet = new Fleet(null, battleGround, 0, battleGround.getOwner(), battleGround.getPopulation());
+            Fleet planetFleet = new Fleet(battleGround.getId(), battleGround.getId(), 0, battleGround.getOwner(), battleGround.getPopulation());
             fleetsInvolved.add(planetFleet);
 
             List<Integer> playersInvolved = new ArrayList<Integer>(fleetsInvolved.size());
@@ -211,8 +211,8 @@ public class Game {
             Map<Fleet, Event> battleEvents = new HashMap<Fleet, Event>(fleetsInvolved.size());
             for(Fleet fleet : fleetsInvolved)
             {
-                Event landing = new LandingEvent(fleet.get_origin().getId(),
-                        fleet.get_destination().getId(),
+                Event landing = new LandingEvent(fleet.get_origin(),
+                        fleet.get_destination(),
                         Size.getSizeForNumber(fleet.getSize()),
                         fleet.getSize(),
                         fleet.getSize(),
@@ -283,6 +283,15 @@ public class Game {
         return combatEvents;
     }
 
+    private Planet getPlanet(int id)
+    {
+        Planet planet =  _universe.getPlanetMap().get(id);
+        if (planet == null) {
+            System.out.println("Planet with id of " + id + " does not exist");
+        }
+        return planet;
+    }
+
     private void updatePlanet(Planet planet)
     {
         _universe.getPlanetMap().put(planet.getId(), planet);
@@ -302,7 +311,7 @@ public class Game {
 
     private boolean isFleetAtFriendlyPlanet(Fleet fleet)
     {
-        Planet destination = _universe.getPlanetMap().get(fleet.get_destination().getId());
+        Planet destination = _universe.getPlanetMap().get(fleet.get_destination());
         return destination.getOwner() == fleet.getOwner();
     }
 
@@ -312,8 +321,8 @@ public class Game {
 
         for(Fleet fleet : fleets)
         {
-            LaunchEvent event = new LaunchEvent(fleet.get_origin().getId(),
-                    fleet.get_destination().getId(),
+            LaunchEvent event = new LaunchEvent(fleet.get_origin(),
+                    fleet.get_destination(),
                     Size.getSizeForNumber(fleet.getSize()),
                     fleet.getOwner());
             launchEvents.add(event);
@@ -335,8 +344,8 @@ public class Game {
                     Planet origin = _universe.getPlanetMap().get(move.getFromPlanet());
                     Planet destination = _universe.getPlanetMap().get(move.getToPlanet());
 
-                    Fleet fleet = new Fleet(origin,
-                            destination,
+                    Fleet fleet = new Fleet(origin.getId(),
+                            destination.getId(),
                             Universe.getTimeToTravel(origin, destination),
                             _playerIds.get(player),
                             fleetSize);

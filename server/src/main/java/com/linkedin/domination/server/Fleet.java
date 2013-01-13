@@ -11,13 +11,13 @@ import com.linkedin.domination.api.Planet;
  */
 public class Fleet {
 
-    private Planet _origin;
-    private Planet _destination;
+    private int _origin;
+    private int _destination;
     private int turnsRemaining;
     private int owner;
     private int size;
 
-    public Fleet(Planet _origin, Planet _destination, int turnsRemaining, int owner, int size) {
+    public Fleet(int _origin, int _destination, int turnsRemaining, int owner, int size) {
         this._origin = _origin;
         this._destination = _destination;
         this.turnsRemaining = turnsRemaining;
@@ -25,19 +25,19 @@ public class Fleet {
         this.size = size;
     }
 
-    public Planet get_origin() {
+    public int get_origin() {
         return _origin;
     }
 
-    public void set_origin(Planet _origin) {
+    public void set_origin(int _origin) {
         this._origin = _origin;
     }
 
-    public Planet get_destination() {
+    public int get_destination() {
         return _destination;
     }
 
-    public void set_destination(Planet _destination) {
+    public void set_destination(int _destination) {
         this._destination = _destination;
     }
 
