@@ -46,6 +46,7 @@ public class Game {
             for(Player player : _players.values())
             {
                 Universe playerUniverse = makeUniverseForPlayer(_playerIds.get(player));
+                // TODO: lastTurnEvents should be curated per player
                 List<Move> playerMoves = player.makeMove(playerUniverse, lastTurnEvents);
                 List<Fleet> playerFleets = getFleetsForPlayer(player, playerMoves);
                 _currentFleets.addAll(playerFleets);
