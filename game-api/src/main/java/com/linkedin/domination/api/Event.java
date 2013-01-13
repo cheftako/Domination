@@ -18,5 +18,6 @@ public interface Event
     public EventType getEventType();
     public Integer getFromPlanet();
     public Integer getToPlanet();
-    public Size gtFleetSize();
+    public Size getFleetSize();
+    public Integer getFleetOwner();
 }
