@@ -55,6 +55,7 @@ public class Game {
             }
 
             // movement
+            List<Fleet> removeFleets = new ArrayList<Fleet>();
             for(Fleet fleet : _currentFleets)
             {
                 fleet.incrementTurn();
@@ -65,7 +66,7 @@ public class Game {
                     if(isFleetAtFriendlyPlanet(fleet)) {
                         Planet friendlyPlanet = _universe.getPlanetMap().get(fleet.get_destination());
                         Planet updated = makePlanetWithNewOwnerAndSize(friendlyPlanet, fleet.getOwner(), friendlyPlanet.getPopulation() + fleet.getSize());
-                        _universe.getPlanetMap().put(updated.getId(), updated);
+                        updatePlanet(updated);
                     } else {
                         // combat setup
                         Planet conflictPlanet = _universe.getPlanetMap().get(fleet.get_destination());
@@ -73,8 +74,11 @@ public class Game {
                         conflict.add(fleet);
                         conflictMap.put(conflictPlanet, conflict);
                     }
+                    removeFleets.add(fleet);
                 }
             }
+
+            _currentFleets.removeAll(removeFleets);
 
             List<Event> combatEvents = combat(conflictMap);
             printCombatEvents(combatEvents);
@@ -181,10 +185,10 @@ public class Game {
             } else {
                 Fleet condensed = new Fleet(fleet.get_origin(),
                         fleet.get_destination(),
-                        fleet.getTurnsRemaining(),
+                        0,
                         fleet.getOwner(),
                         fleet.getSize() + condensingFleet.getSize());
-                condenser.put(fleet.getOwner(), fleet);
+                condenser.put(fleet.getOwner(), condensed);
             }
         }
 
@@ -212,6 +216,7 @@ public class Game {
             List<Fleet> fleetsInvolved = condenseFleets(rawFleets);
 
             int battleSplit = fleetsInvolved.size(); // size before adding planet
+
             Fleet planetFleet = new Fleet(battleGround.getId(), battleGround.getId(), 0, battleGround.getOwner(), battleGround.getPopulation());
             fleetsInvolved.add(planetFleet);
 
@@ -220,7 +225,7 @@ public class Game {
                 playersInvolved.add(fleet.getOwner());
             }
 
-            Map<Fleet, Event> battleEvents = new HashMap<Fleet, Event>(fleetsInvolved.size());
+            Map<Integer, Event> battleEvents = new HashMap<Integer, Event>(fleetsInvolved.size()); // owner, event
             for(Fleet fleet : fleetsInvolved)
             {
                 Event landing = new LandingEvent(fleet.get_origin(),
@@ -231,7 +236,7 @@ public class Game {
                         playersInvolved,
                         fleet.getOwner()
                         );
-                battleEvents.put(fleet, landing);
+                battleEvents.put(fleet.getOwner(), landing);
             }
 
 
@@ -250,12 +255,16 @@ public class Game {
                     }
 
                     if(size > 0) {
-                        fleet.setSize(size);
-                        nextRoundFleets.add(fleet);
-                        LandingEvent fleetUpdate = (LandingEvent) battleEvents.get(fleet);
+                        Fleet nextRoundFleet = new Fleet(fleet.get_origin(),
+                                fleet.get_destination(),
+                                0,
+                                fleet.getOwner(),
+                                size);
+                        nextRoundFleets.add(nextRoundFleet);
+                        LandingEvent fleetUpdate = (LandingEvent) battleEvents.get(fleet.getOwner());
                         fleetUpdate.setShipRemainingCount(size);
                     } else {
-                        LandingEvent fleetUpdate = (LandingEvent) battleEvents.get(fleet);
+                        LandingEvent fleetUpdate = (LandingEvent) battleEvents.get(fleet.getOwner());
                         fleetUpdate.setShipRemainingCount(0); // all your ships died.. you lost.
                     }
 
@@ -361,6 +370,8 @@ public class Game {
                             Universe.getTimeToTravel(origin, destination),
                             _playerIds.get(player),
                             fleetSize);
+                    Planet updatedOrigin = makePlanetWithNewOwnerAndSize(origin, origin.getOwner(), origin.getPopulation() - fleetSize);
+                    updatePlanet(updatedOrigin);
                     playerFleets.add(fleet);
                 }
             }

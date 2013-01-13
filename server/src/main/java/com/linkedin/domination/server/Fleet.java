@@ -23,6 +23,7 @@ public class Fleet {
         this.turnsRemaining = turnsRemaining;
         this.owner = owner;
         this.size = size;
+        assert(size >= 0);
     }
 
     public int get_origin() {
