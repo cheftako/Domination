@@ -17,8 +17,15 @@ public class Universe {
 
     public int getTimeToTravel(int planetOne, int planetTwo)
     {
-        Planet first = _planets.get(planetOne);
-        Planet second = _planets.get(planetTwo);
+        return getTimeToTravel(_planets.get(planetOne), _planets.get(planetTwo));
+    }
+
+    public static int getTimeToTravel(Planet first, Planet second)
+    {
+        if (first == null || second == null)
+        {
+            return 0;
+        }
 
         if (first == null || second == null)
         {
@@ -30,15 +37,6 @@ public class Universe {
         double c2 = a * a + b * b;
         int c = (int) Math.sqrt(c2);
         return c / 10 + 1;
-    }
-
-    public int getTimeToTravel(Planet planetOne, Planet planetTwo)
-    {
-        if (planetOne == null || planetTwo == null)
-        {
-            return 0;
-        }
-        return getTimeToTravel(planetOne.getId(), planetTwo.getId());
     }
 
     public Map<Integer, Planet> getPlanetMap()

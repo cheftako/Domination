@@ -7,5 +7,16 @@ package com.linkedin.domination.api;
 public enum Size {
     SMALL,
     MEDIUM,
-    LARGE
+    LARGE;
+
+    public static Size getSizeForNumber(int unit)
+    {
+        if (unit < 20){
+            return SMALL;
+        } else if (unit < 50) {
+            return MEDIUM;
+        } else{
+            return LARGE;
+        }
+    }
 }
