@@ -69,11 +69,52 @@ public class Game {
 
             List<Event> combatEvents = combat(conflictMap);
             thisTurnEvents.addAll(combatEvents);
+
+            // Growth
+            grow();
+
             lastTurnEvents = thisTurnEvents;
 
         }
 
         return _universe;
+    }
+
+    private void grow()
+    {
+
+        Map<Integer, Planet> plantMap = _universe.getPlanetMap();
+        for(Integer planetId : plantMap.keySet())
+        {
+            Planet oldPlanet = plantMap.get(planetId);
+            if(oldPlanet.getOwner() > 0) // neutral don't grow
+            {
+                Planet updated = oldPlanet;
+                switch(oldPlanet.getSize()) {
+                    case SMALL:
+                        updated = growPlanet(oldPlanet, 1);
+                        break;
+                    case MEDIUM:
+                        updated = growPlanet(oldPlanet, 2);
+                        break;
+                    default:
+                        updated = growPlanet(oldPlanet, 3);
+                }
+                plantMap.put(updated.getId(), updated);
+            }
+        }
+    }
+
+    private Planet growPlanet(Planet oldPlanet, int increaseAmount)
+    {
+        int size = oldPlanet.getPopulation() + increaseAmount;
+        Planet planet = new Planet(oldPlanet.getX(),
+                oldPlanet.getY(),
+                oldPlanet.getId(),
+                oldPlanet.getOwner(),
+                size,
+                Size.getSizeForNumber(size));
+        return planet;
     }
 
     private Universe makeUniverseForPlayer(int playerId)
