@@ -115,7 +115,7 @@ public class SamplePlayer implements Player
             }
         }
 
-        return new ArrayList();
+        return result;
     }
 
     private Integer getTarget(Universe universe, Planet source, List<Move> orders)

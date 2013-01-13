@@ -67,7 +67,7 @@ public class Game {
                         _universe.getPlanetMap().put(updated.getId(), updated);
                     } else {
                         // combat setup
-                        Planet conflictPlanet = _universe.getPlanetMap().get(fleet.get_destination());
+                        Planet conflictPlanet = _universe.getPlanetMap().get(fleet.get_destination().getId());
                         List<Fleet> conflict = conflictMap.containsKey(conflictPlanet) ? conflictMap.get(conflictPlanet) : new ArrayList<Fleet>();
                         conflict.add(fleet);
                         conflictMap.put(conflictPlanet, conflict);
@@ -82,7 +82,7 @@ public class Game {
             grow();
 
             lastTurnEvents = thisTurnEvents;
-
+            _turnNumber++;
         }
 
         return _universe;
@@ -192,7 +192,7 @@ public class Game {
     {
         List<Event> combatEvents = new ArrayList<Event>(conflictMap.size());
 
-        for(Planet battleGround : conflictMap.keySet())
+        for (Planet battleGround : conflictMap.keySet())
         {
             List<Fleet> rawFleets = conflictMap.get(battleGround);
 

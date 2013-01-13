@@ -67,7 +67,7 @@ public class Universe
         for (Integer planetId : _planets.keySet())
         {
             Planet planet = _planets.get(planetId);
-            result += "Planet(" + planetId + ") x=" + planet.getX() + ", y=" + planet.getY() + ", size=" + planet.getSize() + ", owner=" + planet.getOwner() + "\n";
+            result += "Planet(" + planetId + ") x=" + planet.getX() + ", y=" + planet.getY() + ", size=" + planet.getSize() + ", population=" + planet.getPopulation() + ", owner=" + planet.getOwner() + "\n";
         }
         result += "***** UNIVERSE *****\n";
         return result;
