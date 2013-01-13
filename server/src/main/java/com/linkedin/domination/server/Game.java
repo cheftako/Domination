@@ -40,8 +40,7 @@ public class Game {
             // Get user commands
             for(Player player : _players.values())
             {
-                //TODO DO NOT SEND NULL TO THE PLAYER
-                List<Move> playerMoves = player.makeMove(null, lastTurnEvents);
+                List<Move> playerMoves = player.makeMove(makeUniverseForPlayer(_playerIds.get(player)), lastTurnEvents);
                 List<Fleet> playerFleets = getFleetsForPlayer(player, playerMoves);
                 _currentFleets.addAll(playerFleets);
                 List<Event> playerEvents = getEventsForFleets(playerFleets);
@@ -75,6 +74,25 @@ public class Game {
         }
 
         return _universe;
+    }
+
+    private Universe makeUniverseForPlayer(int playerId)
+    {
+        HashMap<Integer, Planet> planets = new HashMap<Integer, Planet>(_universe.getPlanets().size());
+
+        for(Planet planet : _universe.getPlanets())
+        {
+            int x = planet.getX();
+            int y = planet.getY();
+            int id = planet.getId();
+            int owner = planet.getOwner();
+            int population = planet.getOwner() == playerId ? planet.getPopulation() : -1;
+            Size size = Size.getSizeForNumber(planet.getPopulation());
+            Planet specialPlanet = new Planet(x, y, id, owner, population, size);
+            planets.put(id, specialPlanet);
+        }
+
+        return new Universe(Collections.unmodifiableMap(planets));
     }
 
     private boolean isOver()
