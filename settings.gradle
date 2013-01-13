@@ -1,1 +1,1 @@
-include 'game-api', 'server'
+include 'game-api', 'server', 'sample'

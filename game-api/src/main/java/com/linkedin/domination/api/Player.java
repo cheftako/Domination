@@ -2,7 +2,7 @@ package com.linkedin.domination.api;
 
 import java.util.List;
 
-interface Player
+public interface Player
 {
   void initialize(Universe start);
 
