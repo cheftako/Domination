@@ -91,6 +91,7 @@ public class Game {
             _turnNumber++;
         }
 
+        System.out.println("Game lasted " + _turnNumber + " turns");
         return _universe;
     }
 
