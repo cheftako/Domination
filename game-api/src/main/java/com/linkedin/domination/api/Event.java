@@ -15,15 +15,8 @@ public interface Event
         LANDING
     };
 
-    public enum FleetSize
-    {
-        SMALL,
-        MEDIUM,
-        LARGE
-    };
-
     public EventType getEventType();
     public Integer getFromPlanet();
     public Integer getToPlanet();
-    public FleetSize gtFleetSize();
+    public Size gtFleetSize();
 }

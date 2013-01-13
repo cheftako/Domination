@@ -24,7 +24,7 @@ public class Move
 
     public Move(Planet from, Planet to, FleetType size)
     {
-        this(from.id, to.id, size);
+        this(from.getId(), to.getId(), size);
     }
 
     public Move(Integer fromPlanet, Integer toPlanet, FleetType size)

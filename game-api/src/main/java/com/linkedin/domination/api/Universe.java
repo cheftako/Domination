@@ -38,7 +38,7 @@ public class Universe {
         {
             return 0;
         }
-        return getTimeToTravel(planetOne.id, planetTwo.id);
+        return getTimeToTravel(planetOne.getId(), planetTwo.getId());
     }
 
     public Map<Integer, Planet> getPlanetMap()
