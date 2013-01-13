@@ -25,10 +25,9 @@ public class Universe {
             return 0;
         }
 
-        int a = Math.abs(first.x - second.x);
-        int b = Math.abs(first.y - second.y);
+        int a =first.x - second.x;
+        int b = first.y - second.y;
         double c2 = a * a + b * b;
-
         int c = (int) Math.sqrt(c2);
         return c / 10 + 1;
     }
