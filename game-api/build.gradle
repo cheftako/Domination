@@ -1,1 +1,20 @@
 apply plugin: 'java'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    testCompile 'org.testng:testng:6.8'
+    testCompile('org.uncommons:reportng:1.1.2') {
+        exclude group: "org.testng", module: "testng"
+    }
+}
+
+test {
+    useTestNG()
+    options {
+        listeners << 'org.uncommons.reportng.HTMLReporter'
+        listeners << 'org.uncommons.reportng.JUnitXMLReporter'
+    }
+}

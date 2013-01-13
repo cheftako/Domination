@@ -35,8 +35,18 @@ public class Universe
         int a = first.getX() - second.getX();
         int b = first.getY() - second.getY();
         double c2 = a * a + b * b;
-        int c = (int) Math.sqrt(c2);
-        return c / 10 + 1;
+        double c = Math.sqrt(c2);
+        return roundToNextTen(c);
+
+    }
+
+    private static int roundToNextTen(double c)
+    {
+        int tens = (int) c / 10;
+        if (c % 10 > 0){
+            tens++;
+        }
+        return tens;
     }
 
     public Map<Integer, Planet> getPlanetMap()
