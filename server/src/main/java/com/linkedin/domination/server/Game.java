@@ -62,10 +62,12 @@ public class Game {
                 if(fleet.hasArrived())
                 {
                     if(isFleetAtFriendlyPlanet(fleet)) {
-                        // TODO: reinforce planet & generate event?
+                        Planet friendlyPlanet = _universe.getPlanetMap().get(fleet.get_destination().getId());
+                        Planet updated = makePlanetWithNewOwnerAndSize(friendlyPlanet, fleet.getOwner(), friendlyPlanet.getPopulation() + fleet.getSize());
+                        _universe.getPlanetMap().put(updated.getId(), updated);
                     } else {
                         // combat setup
-                        Planet conflictPlanet = fleet.get_destination();
+                        Planet conflictPlanet = _universe.getPlanetMap().get(fleet.get_destination());
                         List<Fleet> conflict = conflictMap.containsKey(conflictPlanet) ? conflictMap.get(conflictPlanet) : new ArrayList<Fleet>();
                         conflict.add(fleet);
                         conflictMap.put(conflictPlanet, conflict);
@@ -156,7 +158,7 @@ public class Game {
         return true;
     }
 
-    private Collection<Fleet> condenseFleets(List<Fleet> fleets)
+    private List<Fleet> condenseFleets(List<Fleet> fleets)
     {
         Map<Integer, Fleet> condenser = new HashMap<Integer, Fleet>();
         for(Fleet fleet : fleets)
@@ -173,7 +175,13 @@ public class Game {
                 condenser.put(fleet.getOwner(), fleet);
             }
         }
-        return condenser.values();
+
+        List<Fleet> fleetList = new ArrayList<Fleet>(condenser.size());
+        for(Fleet fleet : condenser.values())
+        {
+            fleetList.add(fleet);
+        }
+        return fleetList;
     }
     /**
      * Breaking stuff!!
@@ -189,7 +197,7 @@ public class Game {
             List<Fleet> rawFleets = conflictMap.get(battleGround);
 
             // TODO : Since we condense we lose origins
-            Collection<Fleet> fleetsInvolved = condenseFleets(rawFleets);
+            List<Fleet> fleetsInvolved = condenseFleets(rawFleets);
 
             int battleSplit = fleetsInvolved.size(); // size before adding planet
             Fleet planetFleet = new Fleet(null, battleGround, 0, battleGround.getOwner(), battleGround.getPopulation());
@@ -294,7 +302,7 @@ public class Game {
 
     private boolean isFleetAtFriendlyPlanet(Fleet fleet)
     {
-        Planet destination = fleet.get_destination();
+        Planet destination = _universe.getPlanetMap().get(fleet.get_destination().getId());
         return destination.getOwner() == fleet.getOwner();
     }
 
