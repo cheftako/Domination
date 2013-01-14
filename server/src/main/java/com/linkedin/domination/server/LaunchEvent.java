@@ -12,12 +12,14 @@ public class LaunchEvent implements Event {
     private final Integer _destination;
     private final Size _size;
     private final int _owner;
+    private final int _sentShipCount;
 
-    public LaunchEvent(Integer _origin, Integer _destination, Size _size, int owner) {
+    public LaunchEvent(Integer _origin, Integer _destination, Size _size, int owner, int sentShipCount) {
         this._origin = _origin;
         this._destination = _destination;
         this._size = _size;
         this._owner = owner;
+        this._sentShipCount = sentShipCount;
     }
 
     @Override
@@ -47,7 +49,7 @@ public class LaunchEvent implements Event {
 
     @Override
     public int getSentShipCount() {
-        return -1;
+        return _sentShipCount;
     }
 
     @Override

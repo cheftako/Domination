@@ -51,6 +51,7 @@ public class Game {
                 List<Fleet> playerFleets = getFleetsForPlayer(player, playerMoves);
                 _currentFleets.addAll(playerFleets);
                 List<Event> playerEvents = getEventsForFleets(playerFleets);
+                printLaunchEvents(playerEvents);
                 thisTurnEvents.addAll(playerEvents);
             }
 
@@ -102,6 +103,15 @@ public class Game {
             LandingEvent landing = (LandingEvent) event;
             System.out.println("[" + _turnNumber + "] Player " + landing.getFleetOwner() + " landed " + landing.getSentShipCount() +
             " ships on planet " + landing.getToPlanet() + " and ended up with " + landing.getAfterBattleShipCount() + " ships");
+        }
+    }
+
+    private void printLaunchEvents(List<Event> playerEvents)
+    {
+        for (Event event : playerEvents)
+        {
+            System.out.println("[" + _turnNumber + "] Player " + event.getFleetOwner() + " launched " + event.getSentShipCount() +
+            " ships to planet " + event.getToPlanet() + " from planet " + event.getFromPlanet());
         }
     }
 
@@ -347,7 +357,8 @@ public class Game {
             LaunchEvent event = new LaunchEvent(fleet.get_origin(),
                     fleet.get_destination(),
                     Size.getSizeForNumber(fleet.getSize()),
-                    fleet.getOwner());
+                    fleet.getOwner(),
+                    fleet.getSize());
             launchEvents.add(event);
         }
         return launchEvents;
@@ -384,22 +395,21 @@ public class Game {
 
     private int getFleetSize(Move move)
     {
-        Planet origin = _universe.getPlanetMap().get(move.getFromPlanet());
+        Planet origin = getPlanet(move.getFromPlanet());
         if (origin == null) return 0;
 
         int shipsOnPlanet = origin.getPopulation();
-        int scouting = shipsOnPlanet / 4;
 
-        if (shipsOnPlanet == 0) return 0;
+        if (shipsOnPlanet <= 0) return 0;
         switch (move.getSize()) {
             case NONE:
                 return 0;
             case SCOUTING: // .25
-                return scouting;
+                return shipsOnPlanet / 4;
             case RAIDING: // .5
-                return scouting * 2;
+                return shipsOnPlanet / 2;
             case ASSAULT: // .75
-                return  scouting * 3;
+                return  (int) (shipsOnPlanet * .75);
             default:
                 return shipsOnPlanet;
         }
