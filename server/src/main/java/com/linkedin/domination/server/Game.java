@@ -133,7 +133,7 @@ public class Game {
                         updated = growPlanet(oldPlanet, 2);
                         break;
                     default:
-                        updated = growPlanet(oldPlanet, 3);
+                        updated = growPlanet(oldPlanet, 4);
                 }
                 plantMap.put(updated.getId(), updated);
             }

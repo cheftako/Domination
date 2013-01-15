@@ -15,7 +15,13 @@ public class SamplePlayer implements Player
     private List<Integer> _targets = new ArrayList();
     private List<Integer> _flee = new ArrayList();
 
-    private static final Integer MIN_LAUNCH_SIZE = 100;
+    private static final Integer EARLY_MIN_LAUNCH_SIZE = 32;
+    private static final Integer EARLY_LAUNCH_TURN = 100;
+    private static final Integer MID_MIN_LAUNCH_SIZE = 64;
+    private static final Integer MID_LAUNCH_TURN = 200;
+    private static final Integer LATE_MIN_LAUNCH_SIZE = 128;
+
+    private int turn = 0;
 
     public SamplePlayer()
     {
@@ -106,7 +112,9 @@ public class SamplePlayer implements Player
             {
                 continue;
             }
-            if (source.getPopulation() >= MIN_LAUNCH_SIZE)
+            if ((turn < EARLY_LAUNCH_TURN && source.getPopulation() >= EARLY_MIN_LAUNCH_SIZE) ||
+                (turn < MID_LAUNCH_TURN && source.getPopulation() >= MID_MIN_LAUNCH_SIZE) ||
+                (source.getPopulation() >= LATE_MIN_LAUNCH_SIZE))
             {
                 Integer target = getTarget(universe, source, result);
                 if (target != null)
@@ -118,6 +126,7 @@ public class SamplePlayer implements Player
             }
         }
 
+        turn++;
         return result;
     }
 
@@ -145,6 +154,7 @@ public class SamplePlayer implements Player
             if (optionDistance < distance)
             {
                 current = option.getId();
+                distance = optionDistance;
             }
         }
         return current;
