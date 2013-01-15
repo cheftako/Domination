@@ -15,11 +15,11 @@ public class SamplePlayer implements Player
     private List<Integer> _targets = new ArrayList();
     private List<Integer> _flee = new ArrayList();
 
-    private static final Integer EARLY_MIN_LAUNCH_SIZE = 32;
+    private static final Integer EARLY_MIN_LAUNCH_SIZE = 36;
     private static final Integer EARLY_LAUNCH_TURN = 100;
-    private static final Integer MID_MIN_LAUNCH_SIZE = 64;
+    private static final Integer MID_MIN_LAUNCH_SIZE = 80;
     private static final Integer MID_LAUNCH_TURN = 200;
-    private static final Integer LATE_MIN_LAUNCH_SIZE = 128;
+    private static final Integer LATE_MIN_LAUNCH_SIZE = 120;
 
     private int turn = 0;
 
@@ -151,6 +151,10 @@ public class SamplePlayer implements Player
             }
             // We have found a viable target, now lets find the closest.
             Integer optionDistance = universe.getTimeToTravel(source, option);
+            if (isFleetLarger(option.getSize(), source.getSize()))
+            {
+                continue;
+            }
             if (optionDistance < distance)
             {
                 current = option.getId();
