@@ -11,7 +11,7 @@ var $v = require('gamejs/utils/vectors');
 var bigFont = new gamejs.font.Font("40px Verdana");
 var smallFont = new gamejs.font.Font("14px Times");
 
-var director = new Director();
+var director = new Director(20);
 
 /*
  * Player: Shows player name, color and current number of ships
@@ -59,161 +59,80 @@ var Planet = function(id, x, y, owner, ships) {
 };
 gamejs.utils.objects.extend(Planet, gamejs.sprite.Sprite);
 
-/*
- * Scene director
- */
-
-function drawText(surface, x, y, font, color, text) {
-  var textRender = font.render(text, color);
-  if (x < 0) x = surface.getSize()[0] - textRender.getSize()[0] + x;
-  if (y < 0) y = surface.getSize()[1] - textRender.getSize()[1] + y;
-  surface.blit(textRender, [x, y]);
-}
-
-function Director () {
+var GameReplay = function() {
   var self = this;
-  var scenes = [];
-  var activeScene = null;
-
-  self.showTickDuration = true;
-  self.cumulatedTickDuration = 0;
-  self.tickCount = 0;
-  self.tickDuration = null;
-
-  // game loop, msDuration = time since last tick() call
-  function tick(msDuration) {
-    if (activeScene === null) return;
-    if (activeScene.handleEvent) gamejs.event.get().forEach(activeScene.handleEvent);
-    else gamejs.event.get();   // throw all events away
-    if (activeScene.update) activeScene.update(msDuration);
-    if (activeScene.draw) {
-      var mainSurface = gamejs.display.getSurface();
-      activeScene.draw(mainSurface);
-      if (self.showTickDuration) {
-        self.cumulatedTickDuration += msDuration;
-        self.tickCount += 1;
-        if (self.cumulatedTickDuration > 1000) {
-          self.tickDuration = Math.round(self.cumulatedTickDuration / self.tickCount) + ' ms';
-          self.cumulatedTickDuration = 0;
-          self.tickCount = 0;
-        }
-        if (self.tickDuration) drawText(mainSurface, -2, -2, smallFont, "#bb0000", self.tickDuration);
-      }
-    }
-  }
-
-  self.push = function(scene) {
-    if (activeScene) scenes.push(activeScene);
-    activeScene = scene;
+  self.planets = [];
+  self.players = [];
+  self.events = [];
+  var load = function(json) {
+    self.planets = json['planets'];
+    self.players = json['players'];
+    self.events = json['events'];
   };
-
-  self.pop = function(scene) {
-    activeScene = scenes.pop();
-  };
-
-  self.replace = function(scene) {
-    activeScene = scene;
-  };
-
-  self.getScene = function() {
-    return activeScene;
-  };
-
-  gamejs.time.fpsCallback(tick, self, 20);
-  return self;
-}
-
-/*
- * UI
- */
-
-var Button = function(rect, onClick) {
-  var self = this;
-  Button.superConstructor.apply(self, arguments);
-  self.text = null;
-  self.textColor = '#000';
-  self.bgColor = '#fff';
-  self.font = new gamejs.font.Font("18px Times");
-  self.onClick = onClick;
-  self.rect = new gamejs.Rect(rect);
-  self.enabled = true;
-  self.hovered = false;
-  self.mousePressed = false;
-  self.handleEvent = function(event) {
-    self.hovered = self.rect.collidePoint(event.pos);
-    if (event.type == gamejs.event.MOUSE_DOWN) {
-      self.mousePressed = self.hovered;
-      return true;
-    } else if (event.type == gamejs.event.MOUSE_UP) {
-      if (self.mousePressed && self.enabled && self.onClick) {
-        self.onClick();
-        return true;
-      }
-    }
-    return false;
-  };
-  self.draw = function(surface) {
-    gamejs.draw.rect(surface, self.bgColor, self.rect, 0);
-    gamejs.draw.rect(surface, self.textColor, self.rect, 2);
-    if (self.text) {
-      textRender = self.font.render(self.text, self.textColor);
-      var tsize = textRender.getSize();
-      var x0 = (self.rect.width - tsize[0]) / 2 + self.rect.x;
-      var y0 = (self.rect.height - tsize[1]) / 2 + self.rect.y - 1;
-      surface.blit(textRender, [x0, y0]);
-    }
-    if (self.enabled === false || !self.onClick) {
-      gamejs.draw.rect(surface, 'rgba(200, 200, 200, 0.5)', self.rect, 0);
-    } else if (self.hovered) {
-      gamejs.draw.rect(surface, 'rgba(200, 200, 0, 0.5)', self.rect, 0);
-    }
-  };
-  return self;
 };
-gamejs.utils.objects.extend(Button, gamejs.sprite.Sprite);
 
 /*
  * Main game scene
  */
 
-function addButton(group, rect, text, onClick) {
-  var button = new Button(rect, onClick);
-  button.text = text;
-  group.add(button);
-  return button;
-}
-
 var GameScene = function() {
   var self = this;
+  // Settings
+  self.bgColor = '#eee';
+  // Components
   self.scoreboard = new gamejs.sprite.Group();
-  self.controls = new gamejs.sprite.Group();
+  self.buttons = new gamejs.sprite.Group();
   self.planets = new gamejs.sprite.Group();
   self.ships = new gamejs.sprite.Group();
-  // Controls
+  // State
+  self.game = null;         // Game replay object, of type GameReplay
+  self.isPlaying = false;
+  self.currentTurn = 0;
+  // Helpers
+  self.addButton = function(rect, text, onClick) {
+    var button = new Button(rect, onClick);
+    button.text = text;
+    button.bgColor = self.bgColor;
+    self.buttons.add(button);
+    return button;
+  };
+  // Game control functions
+  self.load = function(path) {
+    // Load game replay file, 'path' should be either an object or a path (file or http) to a json file
+  };
   self.restart = function() {
+    // Restart game from beginning
   };
   self.play = function() {
+    // Toggle play/pause
+  };
+  self.stepForward = function() {
+    // Step 1 turn forward
+  };
+  self.stepBackward = function() {
+    // Step 1 turn backward
   };
   // Buttons
-  addButton(self.controls, [50, 10, 100, 30], "Restart", self.restart);
-  addButton(self.controls, [170, 10, 100, 30], "Rewind", null);
-  addButton(self.controls, [290, 10, 100, 30], "Play", self.play);
+  self.addButton([2, 2, 56, 24], "Restart", self.restart);
+  self.addButton([62, 2, 56, 24], "Play", self.play);
+  self.addButton([122, 2, 76, 24], "Step back", self.stepBackward);
+  self.addButton([202, 2, 96, 24], "Step forward", self.stepForward);
   // Events
   self.handleEvent = function(event) {
-    if (handleGroupEvents(event, self.controls)) return;
+    if (handleGroupEvents(event, self.buttons)) return;
   };
   // Update
   self.update = function(msDuration) {
     self.scoreboard.update(msDuration);
-    self.controls.update(msDuration);
+    self.buttons.update(msDuration);
     self.planets.update(msDuration);
     self.ships.update(msDuration);
   };
   // Draw
   self.draw = function(surface) {
-    surface.clear();
+    surface.fill(self.bgColor);
     self.scoreboard.draw(surface);
-    self.controls.draw(surface);
+    self.buttons.draw(surface);
     self.planets.draw(surface);
     self.ships.draw(surface);
   };
@@ -223,14 +142,6 @@ var GameScene = function() {
 /*
  * Simple title scene
  */
-
-function handleGroupEvents(event, group) {
-  var handled = false;
-  group.forEach(function(sprite) {
-    if (sprite.handleEvent && sprite.handleEvent(event)) handled = true;
-  });
-  return handled;
-}
 
 var TitleScene = function(title) {
   var self = this;
@@ -257,6 +168,122 @@ var TitleScene = function(title) {
   };
   return self;
 };
+
+/*
+ * Scene director
+ */
+
+function Director (fps) {
+  var self = this;
+  var scenes = [];
+  var activeScene = null;
+  self.showTickDuration = true;
+  self.cumulatedTickDuration = 0;
+  self.tickCount = 0;
+  self.tickDuration = null;
+  // game loop, msDuration = time since last tick() call
+  function tick(msDuration) {
+    if (activeScene === null) return;
+    if (activeScene.handleEvent) gamejs.event.get().forEach(activeScene.handleEvent);
+    else gamejs.event.get();   // throw all events away
+    if (activeScene.update) activeScene.update(msDuration);
+    if (activeScene.draw) {
+      var mainSurface = gamejs.display.getSurface();
+      activeScene.draw(mainSurface);
+      if (self.showTickDuration) {
+        self.cumulatedTickDuration += msDuration;
+        self.tickCount += 1;
+        if (self.cumulatedTickDuration > 1000) {
+          self.tickDuration = Math.round(self.cumulatedTickDuration / self.tickCount) + ' ms';
+          self.cumulatedTickDuration = 0;
+          self.tickCount = 0;
+        }
+        if (self.tickDuration) drawText(mainSurface, -2, -2, smallFont, "#bb0000", self.tickDuration);
+      }
+    }
+  }
+  self.push = function(scene) {
+    if (activeScene) scenes.push(activeScene);
+    activeScene = scene;
+  };
+  self.pop = function() {
+    activeScene = scenes.pop();
+    return activeScene;
+  };
+  self.replace = function(scene) {
+    activeScene = scene;
+  };
+  gamejs.time.fpsCallback(tick, self, fps);
+  return self;
+}
+
+/*
+ * UI
+ */
+
+var Button = function(rect, onClick) {
+  var self = this;
+  Button.superConstructor.apply(self, arguments);
+  self.text = null;
+  self.textColor = '#000';
+  self.bgColor = '#fff';
+  self.font = new gamejs.font.Font("18px Times");
+  self.onClick = onClick;
+  self.rect = new gamejs.Rect(rect);
+  self.enabled = true;
+  self.hovered = false;
+  self.mousePressed = false;
+  self.handleEvent = function(event) {
+    self.hovered = event.pos && self.rect.collidePoint(event.pos);
+    if (event.type == gamejs.event.MOUSE_DOWN) {
+      self.mousePressed = self.hovered;
+      return true;
+    } else if (event.type == gamejs.event.MOUSE_UP) {
+      if (self.mousePressed && self.hovered && self.enabled && self.onClick) {
+        self.onClick();
+        return true;
+      }
+    }
+    return false;
+  };
+  self.draw = function(surface) {
+    gamejs.draw.rect(surface, self.bgColor, self.rect, 0);
+    gamejs.draw.rect(surface, self.textColor, self.rect, 1);
+    if (self.text) {
+      textRender = self.font.render(self.text, self.textColor);
+      var tsize = textRender.getSize();
+      var x0 = (self.rect.width - tsize[0]) / 2 + self.rect.x;
+      var y0 = (self.rect.height - tsize[1]) / 2 + self.rect.y - 1;
+      surface.blit(textRender, [x0, y0]);
+    }
+    if (self.enabled === false || !self.onClick) {
+      gamejs.draw.rect(surface, 'rgba(200, 200, 200, 0.3)', self.rect, 0);
+    } else if (self.hovered) {
+      gamejs.draw.rect(surface, 'rgba(220, 220, 0, 0.3)', self.rect, 0);
+    }
+  };
+  return self;
+};
+gamejs.utils.objects.extend(Button, gamejs.sprite.Sprite);
+
+/*
+ * Helpers
+ */
+
+function handleGroupEvents(event, group) {
+  var handled = false;
+  group.forEach(function(sprite) {
+    if (sprite.handleEvent && sprite.handleEvent(event)) handled = true;
+  });
+  return handled;
+}
+
+function drawText(surface, x, y, font, color, text) {
+  var textRender = font.render(text, color);
+  if (x < 0) x = surface.getSize()[0] - textRender.getSize()[0] + x;
+  if (y < 0) y = surface.getSize()[1] - textRender.getSize()[1] + y;
+  surface.blit(textRender, [x, y]);
+}
 
 /*
  * Main function
