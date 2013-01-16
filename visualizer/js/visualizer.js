@@ -11,6 +11,8 @@ var $v = require('gamejs/utils/vectors');
 var bigFont = new gamejs.font.Font("40px Verdana");
 var smallFont = new gamejs.font.Font("14px Times");
 
+var director = new Director();
+
 /*
  * Player: Shows player name, color and current number of ships
  */
@@ -129,33 +131,41 @@ var Button = function(rect, onClick) {
   var self = this;
   Button.superConstructor.apply(self, arguments);
   self.text = null;
-  self.color = '#000';
+  self.textColor = '#000';
+  self.bgColor = '#fff';
+  self.font = new gamejs.font.Font("18px Times");
   self.onClick = onClick;
   self.rect = new gamejs.Rect(rect);
   self.enabled = true;
   self.hovered = false;
-  self.font = new gamejs.font.Font("18px Times");
+  self.mousePressed = false;
   self.handleEvent = function(event) {
     self.hovered = self.rect.collidePoint(event.pos);
-    if (!self.enabled) return false;
+    if (event.type == gamejs.event.MOUSE_DOWN) {
+      self.mousePressed = self.hovered;
+      return true;
+    } else if (event.type == gamejs.event.MOUSE_UP) {
+      if (self.mousePressed && self.enabled && self.onClick) {
+        self.onClick();
+        return true;
+      }
+    }
+    return false;
   };
   self.draw = function(surface) {
-    if (!self.rect) return;
+    gamejs.draw.rect(surface, self.bgColor, self.rect, 0);
+    gamejs.draw.rect(surface, self.textColor, self.rect, 2);
     if (self.text) {
-      textRender = self.font.render(self.text, self.color);
+      textRender = self.font.render(self.text, self.textColor);
       var tsize = textRender.getSize();
       var x0 = (self.rect.width - tsize[0]) / 2 + self.rect.x;
       var y0 = (self.rect.height - tsize[1]) / 2 + self.rect.y - 1;
       surface.blit(textRender, [x0, y0]);
     }
-    if (self.hovered) {
-      gamejs.draw.rect(surface, 'rgba(150, 150, 1, 0.4)', self.rect, 0);
-      gamejs.draw.rect(surface, 'rgba(0, 0, 0, 0.6)', self.rect, 2);
-    } else {
-      gamejs.draw.rect(surface, 'rgba(0, 0, 0, 0.9)', self.rect, 2);
-    }
-    if (!self.enabled) {
+    if (self.enabled === false || !self.onClick) {
       gamejs.draw.rect(surface, 'rgba(200, 200, 200, 0.5)', self.rect, 0);
+    } else if (self.hovered) {
+      gamejs.draw.rect(surface, 'rgba(200, 200, 0, 0.5)', self.rect, 0);
     }
   };
   return self;
@@ -166,13 +176,47 @@ gamejs.utils.objects.extend(Button, gamejs.sprite.Sprite);
  * Main game scene
  */
 
+function addButton(group, rect, text, onClick) {
+  var button = new Button(rect, onClick);
+  button.text = text;
+  group.add(button);
+  return button;
+}
+
 var GameScene = function() {
   var self = this;
   self.scoreboard = new gamejs.sprite.Group();
   self.controls = new gamejs.sprite.Group();
   self.planets = new gamejs.sprite.Group();
   self.ships = new gamejs.sprite.Group();
-
+  // Controls
+  self.restart = function() {
+  };
+  self.play = function() {
+  };
+  // Buttons
+  addButton(self.controls, [50, 10, 100, 30], "Restart", self.restart);
+  addButton(self.controls, [170, 10, 100, 30], "Rewind", null);
+  addButton(self.controls, [290, 10, 100, 30], "Play", self.play);
+  // Events
+  self.handleEvent = function(event) {
+    if (handleGroupEvents(event, self.controls)) return;
+  };
+  // Update
+  self.update = function(msDuration) {
+    self.scoreboard.update(msDuration);
+    self.controls.update(msDuration);
+    self.planets.update(msDuration);
+    self.ships.update(msDuration);
+  };
+  // Draw
+  self.draw = function(surface) {
+    surface.clear();
+    self.scoreboard.draw(surface);
+    self.controls.draw(surface);
+    self.planets.draw(surface);
+    self.ships.draw(surface);
+  };
   return self;
 };
 
@@ -191,7 +235,7 @@ function handleGroupEvents(event, group) {
 var TitleScene = function(title) {
   var self = this;
   self.buttons = new gamejs.sprite.Group();
-  var startButton = new Button([350, 150, 100, 30], function() {});
+  var startButton = new Button([350, 150, 100, 30], function() { director.push(new GameScene()); });
   startButton.text = "Start";
   self.buttons.add(startButton);
   self.bgColor = null;
@@ -219,6 +263,5 @@ var TitleScene = function(title) {
  */
 
 gamejs.ready(function () {
-  var director = new Director();
   director.push(new TitleScene("Galactic Domination"));
 });
