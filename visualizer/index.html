@@ -1,0 +1,36 @@
+<html>
+  <head>
+
+    <meta charset="UTF-8">
+    <title>Galactic Domination</title>
+
+      <style type=text/css>
+          body{
+             background:#fff;
+             color:#009;
+             margin:1em 0 2em 6em;
+             padding:0;
+          }
+          #gjs-loader {
+          }
+      </style>
+
+    <script type="text/javascript" src="js/yabble.js"></script>
+    <script type="text/javascript" src="js/gamejs.min.js"></script>
+    <script>
+        require.setModuleRoot('./js/');
+        require.run('visualizer')
+    </script>
+
+  </head>
+
+  <body>
+
+    <div>
+        <div id="gjs-loader">Loading...</div>
+        <canvas id="gjs-canvas" width="800" height="600"></canvas>
+    </div>
+
+  </body>
+
+</html>
