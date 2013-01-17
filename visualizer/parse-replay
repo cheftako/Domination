@@ -39,9 +39,9 @@ def main():
         planets.append({
          'id': int(planet_info.group(1)),
          'x': int(planet_info.group(2)),
-         'y': int(planet_info.group(2)),
-         'population': int(planet_info.group(2)),
-         'owner': int(planet_info.group(2)),
+         'y': int(planet_info.group(3)),
+         'population': int(planet_info.group(4)),
+         'owner': int(planet_info.group(5)),
         })
       elif player_info:
         players.append({
@@ -66,6 +66,11 @@ def main():
         })
       else:
         sys.exit("Line %s not recognized: %s" % (n, line))
+
+    while len(players) < 3:
+      players.append({
+        'id': len(players) + 1, 'name': "Player %s" % (len(players) + 1)
+      })
 
     output = {
       'planets': planets,
