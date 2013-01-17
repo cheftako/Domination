@@ -1,0 +1,77 @@
+#!/usr/bin/env python
+
+import optparse
+import re
+import json
+import sys
+
+PLANET_INFO = re.compile(r"^Planet\(([0-9]+)\) x=([0-9]+), y=([0-9]+), size=.+, population=([0-9]+), owner=([0-9])$")
+PLAYER_INFO = re.compile(r"^(.+) is player ([0-9])$")
+EVENT_INFO1 = re.compile(r"\[([0-9]+)\] Player ([0-9]+) launched ([0-9]+) ships to planet ([0-9]+) from planet ([0-9]+)")
+EVENT_INFO2 = re.compile(r"\[([0-9]+)\] Player ([0-9]+) landed ([0-9]+) ships on planet ([0-9]+) and ended up with ([0-9]+) ships")
+
+def main():
+  parser = optparse.OptionParser(description="Generate a JSON from game.sh output")
+  #parser.add_argument("file", help="Game output to parse")
+  (opts, args) = parser.parse_args(sys.argv)
+
+  if len(args) != 2:
+    sys.exit("Specify file name to parse")
+
+  with open(args[1], 'r') as fh:
+    planets = list()
+    players = list()
+    events = list()
+    confirmations = list()
+    for line in fh:
+      line = line.strip()
+      if not line or line.startswith('Starting') or line.startswith('****') or line.startswith('Game lasted') or line.startswith('com.linkedin.'):
+        continue
+      planet_info = PLANET_INFO.match(line)
+      player_info = PLAYER_INFO.match(line)
+      ev1 = EVENT_INFO1.search(line)
+      ev2 = EVENT_INFO2.search(line)
+      if planet_info:
+        if players:
+          continue
+        planets.append({
+         'id': int(planet_info.group(1)),
+         'x': int(planet_info.group(2)),
+         'y': int(planet_info.group(2)),
+         'population': int(planet_info.group(2)),
+         'owner': int(planet_info.group(2)),
+        })
+      elif player_info:
+        players.append({
+          'id': int(player_info.group(2)),
+          'name': player_info.group(1)
+        })
+      elif ev1:
+        events.append({
+          'turn': int(ev1.group(1)),
+          'player': int(ev1.group(2)),
+          'ships': int(ev1.group(3)),
+          'to': int(ev1.group(4)),
+          'from': int(ev1.group(5)),
+        })
+      elif ev2:
+        confirmations.append({
+          'turn': int(ev2.group(1)),
+          'player': int(ev2.group(2)),
+          'land_ships': int(ev2.group(3)),
+          'planet': int(ev2.group(4)),
+          'ships': int(ev2.group(5)),
+        })
+      else:
+        print line
+
+    output = {
+      'planets': planets,
+      'players': players,
+      'events': events,
+      'confirmations': confirmations,
+    }
+    print json.dumps(output, indent=2, sort_keys=True)
+
+if __name__ == "__main__":
+  main()

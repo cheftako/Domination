@@ -49,7 +49,10 @@ var Planet = function(id, x, y, owner, ships) {
   self.y = y;
   self.owner = owner;
   self.ships = ships;
-  self.rect = new gamejs.Rect(rect);
+  self.rect = new gamejs.Rect();
+  self.rect.center = [x, y];
+  self.rect.width = 10;
+  self.rect.height = 10;
 
   self.update = function(msDuration) {
   };
