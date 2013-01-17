@@ -8,6 +8,8 @@
 var gamejs = require('gamejs');
 var $v = require('gamejs/utils/vectors');
 
+gamejs.preload(["restart.png", "start.png", "pause.png", "skip-backward.png", "skip-forward.png"]);
+
 var bigFont = new gamejs.font.Font("40px Verdana");
 var smallFont = new gamejs.font.Font("14px Times");
 
@@ -89,9 +91,9 @@ var GameScene = function() {
   self.isPlaying = false;
   self.currentTurn = 0;
   // Helpers
-  self.addButton = function(rect, text, onClick) {
+  self.addButton = function(rect, image, tooltip, onClick) {
     var button = new Button(rect, onClick);
-    button.text = text;
+    button.image = image;
     button.bgColor = self.bgColor;
     self.buttons.add(button);
     return button;
@@ -103,8 +105,14 @@ var GameScene = function() {
   self.restart = function() {
     // Restart game from beginning
   };
-  self.play = function() {
+  self.togglePlay = function() {
     // Toggle play/pause
+    self.isPlaying = !self.isPlaying;
+    if (self.isPlaying) {
+      self.playButton.image = "pause.png";
+    } else {
+      self.playButton.image = "start.png";
+    }
   };
   self.stepForward = function() {
     // Step 1 turn forward
@@ -113,13 +121,13 @@ var GameScene = function() {
     // Step 1 turn backward
   };
   // Buttons
-  self.addButton([2, 2, 56, 24], "Restart", self.restart);
-  self.addButton([62, 2, 56, 24], "Play", self.play);
-  self.addButton([122, 2, 76, 24], "Step back", self.stepBackward);
-  self.addButton([202, 2, 96, 24], "Step forward", self.stepForward);
+  self.addButton([0, 0, 34, 34], "restart.png", "Restart game from beginning", self.restart);
+  self.playButton = self.addButton([35, 0, 36, 34], "start.png" ,"Play/pause game", self.togglePlay);
+  self.addButton([0, 35, 34, 34], "skip-backward.png", "Step one turn back", self.stepBackward);
+  self.addButton([35, 35, 34, 34], "skip-forward.png", "Step one turn forward", self.stepForward);
   // Events
   self.handleEvent = function(event) {
-    if (handleGroupEvents(event, self.buttons)) return;
+    self.buttons.forEach(function(btn) { btn.handleEvent(event); });
   };
   // Update
   self.update = function(msDuration) {
@@ -154,7 +162,7 @@ var TitleScene = function(title) {
   self.title = title;
   gamejs.display.setCaption(title);
   self.handleEvent = function(event) {
-    if (handleGroupEvents(event, self.buttons)) return;
+    self.buttons.forEach(function(btn) { btn.handleEvent(event); });
   };
   self.draw = function(surface) {
     surface.fill(self.bgColor || '#fff');
@@ -198,7 +206,7 @@ function Director (fps) {
           self.cumulatedTickDuration = 0;
           self.tickCount = 0;
         }
-        if (self.tickDuration) drawText(mainSurface, -2, -2, smallFont, "#bb0000", self.tickDuration);
+        if (self.tickDuration) drawCenteredText(mainSurface, -2, -2, smallFont, "#bb0000", self.tickDuration);
       }
     }
   }
@@ -221,45 +229,61 @@ function Director (fps) {
  * UI
  */
 
+function centeredPosition(r1, r2) {
+  var x0 = (r1.width - r2[0]) / 2 + r1.x;
+  var y0 = (r1.height - r2[1]) / 2 + r1.y;
+  return [x0, y0];
+}
+
 var Button = function(rect, onClick) {
   var self = this;
   Button.superConstructor.apply(self, arguments);
   self.text = null;
+  self.image = null;
   self.textColor = '#000';
   self.bgColor = '#fff';
-  self.font = new gamejs.font.Font("18px Times");
+  self.font = new gamejs.font.Font("20px Times");
   self.onClick = onClick;
   self.rect = new gamejs.Rect(rect);
   self.enabled = true;
   self.hovered = false;
   self.mousePressed = false;
   self.handleEvent = function(event) {
-    self.hovered = event.pos && self.rect.collidePoint(event.pos);
     if (event.type == gamejs.event.MOUSE_DOWN) {
       self.mousePressed = self.hovered;
-      return true;
+    } else if (event.type === gamejs.event.MOUSE_MOTION) {
+      self.hovered = self.rect.collidePoint(event.pos);
     } else if (event.type == gamejs.event.MOUSE_UP) {
       if (self.mousePressed && self.hovered && self.enabled && self.onClick) {
         self.onClick();
-        return true;
       }
+      self.mousePressed = false;
     }
-    return false;
+  };
+  self.update = function(msDuration) {
+
   };
   self.draw = function(surface) {
     gamejs.draw.rect(surface, self.bgColor, self.rect, 0);
-    gamejs.draw.rect(surface, self.textColor, self.rect, 1);
+    if (self.image) {
+      var img = gamejs.image.load(self.image);
+      surface.blit(img, centeredPosition(self.rect, img.getSize()));
+    }
     if (self.text) {
+      gamejs.draw.rect(surface, self.textColor, self.rect, 1);
       textRender = self.font.render(self.text, self.textColor);
-      var tsize = textRender.getSize();
-      var x0 = (self.rect.width - tsize[0]) / 2 + self.rect.x;
-      var y0 = (self.rect.height - tsize[1]) / 2 + self.rect.y - 1;
-      surface.blit(textRender, [x0, y0]);
+      surface.blit(textRender, centeredPosition(self.rect, textRender.getSize()));
     }
     if (self.enabled === false || !self.onClick) {
-      gamejs.draw.rect(surface, 'rgba(200, 200, 200, 0.3)', self.rect, 0);
+      gamejs.draw.rect(surface, 'rgba(200, 200, 200, 0.2)', self.rect, 0);
     } else if (self.hovered) {
-      gamejs.draw.rect(surface, 'rgba(220, 220, 0, 0.3)', self.rect, 0);
+      if (self.mousePressed) {
+        gamejs.draw.rect(surface, 'rgba(0, 0, 220, 0.2)', self.rect, 0);
+      } else {
+        gamejs.draw.rect(surface, 'rgba(220, 220, 0, 0.2)', self.rect, 0);
+      }
+    //} else if (self.mousePressed) {
+    //  gamejs.draw.rect(surface, 'rgba(0, 0, 220, 0.3)', self.rect, 0);
     }
   };
   return self;
@@ -270,15 +294,7 @@ gamejs.utils.objects.extend(Button, gamejs.sprite.Sprite);
  * Helpers
  */
 
-function handleGroupEvents(event, group) {
-  var handled = false;
-  group.forEach(function(sprite) {
-    if (sprite.handleEvent && sprite.handleEvent(event)) handled = true;
-  });
-  return handled;
-}
-
-function drawText(surface, x, y, font, color, text) {
+function drawCenteredText(surface, x, y, font, color, text) {
   var textRender = font.render(text, color);
   if (x < 0) x = surface.getSize()[0] - textRender.getSize()[0] + x;
   if (y < 0) y = surface.getSize()[1] - textRender.getSize()[1] + y;
