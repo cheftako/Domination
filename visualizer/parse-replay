@@ -23,7 +23,9 @@ def main():
     players = list()
     events = list()
     confirmations = list()
+    n = 0
     for line in fh:
+      n += 1
       line = line.strip()
       if not line or line.startswith('Starting') or line.startswith('****') or line.startswith('Game lasted') or line.startswith('com.linkedin.'):
         continue
@@ -63,7 +65,7 @@ def main():
           'ships': int(ev2.group(5)),
         })
       else:
-        print line
+        sys.exit("Line %s not recognized: %s" % (n, line))
 
     output = {
       'planets': planets,
