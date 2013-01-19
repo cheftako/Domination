@@ -15,28 +15,64 @@ var fleetUniqueIdCounter = 0;
 
 // Settings
 gamejs.preload(["restart.png", "start.png", "pause.png", "skip-backward.png", "skip-forward.png"]);
-var playerColors = { 0: '#bbb', 1: '#0f0', 2: '#00f', 3: '#ff0' };
+var playerColors = { 0: '#bbb', 1: '#f0f', 2: '#0ff', 3: '#ff0' };
 var gameFont = new gamejs.font.Font("14px Verdana");
+var scoreboardBigFont = new gamejs.font.Font("18px Verdana");
+var scoreboardSmallFont = new gamejs.font.Font("14px Verdana");
 
 /*
  * Player: Shows player name, color and current number of ships
  */
 
-var PlayerSprite = function(id, name, color, avatar) {
+var PlayerSprite = function(group, id, rect) {
   var self = this;
   PlayerSprite.superConstructor.apply(self, arguments);
   self.id = id;
-  self.name = name;
-  self.color = color;
-  self.avatar = avatar;
+  self.rect = new gamejs.Rect(rect);
+  self.color = playerColors[id];
+  self.ships = 0;
+  self.planets = 0;
+  self.update = function(msDuration) {
+    self.ships = currentGameReplay.playerShips(self.id);
+  };
+  self.draw = function(surface) {
+    gamejs.draw.rect(surface, self.color, self.rect, 0);
+    gamejs.draw.rect(surface, 'rgba(0,0,0,0.4)', self.rect, 2);
+    var nameRender = scoreboardBigFont.render(currentGameReplay.players[self.id].name, '#000');
+    surface.blit(nameRender, [self.rect.x + 2, self.rect.y]);
+    var shipsRender = scoreboardSmallFont.render(self.ships + ' ships', '#000');
+    surface.blit(shipsRender, [self.rect.right - shipsRender.getSize()[0] - 4, self.rect.top + (self.rect.height - shipsRender.getSize()[1]) / 2 ]);
+  };
+  group.add(self);
+  return self;
+};
+gamejs.utils.objects.extend(PlayerSprite, gamejs.sprite.Sprite);
+
+/*
+ * ScoreBoard: Shows player info, current turn, total turns
+ */
+
+var ScoreBoardSprite = function(group, rect) {
+  var self = this;
+  ScoreBoardSprite.superConstructor.apply(self, arguments);
+  self.rect = new gamejs.Rect(rect);
+  var x = self.rect.x;
+  var pwidth = 200;
+  var pheight = 26;
+  for (var player_id in playerColors) {
+    if (player_id > 0) {
+      new PlayerSprite(group, player_id, [x, self.rect.y, pwidth, pheight]);
+      x += pwidth;
+    }
+  }
   self.update = function(msDuration) {
   };
   self.draw = function(surface) {
   };
-
+  group.add(self);
   return self;
 };
-gamejs.utils.objects.extend(PlayerSprite, gamejs.sprite.Sprite);
+gamejs.utils.objects.extend(ScoreBoardSprite, gamejs.sprite.Sprite);
 
 /*
  * PlanetSprite: Sprite showing a planet for current turn
@@ -232,13 +268,17 @@ var GameReplay = function() {
       self.error = "Can't load game replay:\n" + err;
     }
   };
-  // Ships on a planet a current turn
-  self.planetShips = function(planet) {
-    return self.turns[self.currentTurn].planetShips[planet.id];
+  // Ships on a planet in current turn
+  self.planetShips = function(planet_id) {
+    return self.turns[self.currentTurn].planetShips[planet_id];
   };
-  // Ships on a planet a current turn
-  self.planetOwner = function(planet) {
-    return self.turns[self.currentTurn].planetOwner[planet.id];
+  // Ships on a planet in current turn
+  self.planetOwner = function(planet_id) {
+    return self.turns[self.currentTurn].planetOwner[planet_id];
+  };
+  // Ships belonging to a player in current turn
+  self.playerShips = function(player_id) {
+    return self.turns[self.currentTurn].playerShips[player_id];
   };
   self.moveTurn = function(step) {
     self.setTurn(self.currentTurn + step);
@@ -317,6 +357,8 @@ var GameScene = function() {
   self.playButton = self.addButton([35, 0, 36, 34], "start.png" ,"Play/pause game", self.togglePlay);
   self.addButton([0, 35, 34, 34], "skip-backward.png", "Step one turn back", self.stepBackward);
   self.addButton([35, 35, 34, 34], "skip-forward.png", "Step one turn forward", self.stepForward);
+  // Scoreboard
+  new ScoreBoardSprite(self.scoreboard, [72, 0, 788, 40]);
   // Events
   self.handleEvent = function(event) {
     self.buttons.forEach(function(btn) { btn.handleEvent(event); });
@@ -327,6 +369,7 @@ var GameScene = function() {
       self.lastTurnTick += msDuration;
       if (self.lastTurnTick > self.turnSpeed) {
         self.stepForward();
+        if (currentGameReplay.currentTurn >= currentGameReplay.totalTurns) self.pause();
       }
     }
     self.scoreboard.update(msDuration);
