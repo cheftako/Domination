@@ -2,13 +2,26 @@
 
 import optparse
 import re
-import json
 import sys
 
 PLANET_INFO = re.compile(r"^Planet\(([0-9]+)\) x=([0-9]+), y=([0-9]+), size=.+, population=([0-9]+), owner=([0-9])$")
 PLAYER_INFO = re.compile(r"^(.+) is player ([0-9])$")
-EVENT_INFO1 = re.compile(r"\[([0-9]+)\] Player ([0-9]+) launched ([0-9]+) ships to planet ([0-9]+) from planet ([0-9]+)")
+EVENT_INFO1 = re.compile(r"\[([0-9]+)\] Player ([0-9]+) launched ([0-9]+) ships to planet ([0-9]+) from planet ([0-9]+), lands in ([0-9]+) turns")
 EVENT_INFO2 = re.compile(r"\[([0-9]+)\] Player ([0-9]+) landed ([0-9]+) ships on planet ([0-9]+) and ended up with ([0-9]+) ships")
+NUMBER = re.compile(r"[0-9]+")
+
+def compact_json(name, array):
+  """ Compact JSON representation of simple, one-level 'array', used to generate a much more compact JSON representation ... """
+  res = '"%s": [\n' % name
+  for item in array:
+    res += '  {'
+    for key in item:
+      if NUMBER.match(str(item[key])):
+        res += '"%s": %s, ' % (key, item[key])
+      else:
+        res += '"%s": "%s", ' % (key, item[key])
+    res += "},\n"
+  return res + '],\n'
 
 def main():
   parser = optparse.OptionParser(description="Generate a JSON from game.sh output")
@@ -22,7 +35,6 @@ def main():
     planets = list()
     players = list()
     events = list()
-    confirmations = list()
     n = 0
     for line in fh:
       n += 1
@@ -40,7 +52,7 @@ def main():
          'id': int(planet_info.group(1)),
          'x': int(planet_info.group(2)),
          'y': int(planet_info.group(3)),
-         'population': int(planet_info.group(4)),
+         'ships': int(planet_info.group(4)),
          'owner': int(planet_info.group(5)),
         })
       elif player_info:
@@ -49,21 +61,22 @@ def main():
           'name': player_info.group(1)
         })
       elif ev1:
+        turn = int(ev1.group(1))
+        player = int(ev1.group(2))
+        ships = int(ev1.group(3))
+        destination = int(ev1.group(4))
+        origin = int(ev1.group(5))
+        duration = int(ev1.group(6))
         events.append({
-          'turn': int(ev1.group(1)),
-          'player': int(ev1.group(2)),
-          'ships': int(ev1.group(3)),
-          'to': int(ev1.group(4)),
-          'from': int(ev1.group(5)),
+          'turn': turn,
+          'player': player,
+          'ships': ships,
+          'destination': destination,
+          'origin': origin,
+          'duration': duration,
         })
       elif ev2:
-        confirmations.append({
-          'turn': int(ev2.group(1)),
-          'player': int(ev2.group(2)),
-          'land_ships': int(ev2.group(3)),
-          'planet': int(ev2.group(4)),
-          'ships': int(ev2.group(5)),
-        })
+        pass
       else:
         sys.exit("Line %s not recognized: %s" % (n, line))
 
@@ -72,13 +85,12 @@ def main():
         'id': len(players) + 1, 'name': "Player %s" % (len(players) + 1)
       })
 
-    output = {
-      'planets': planets,
-      'players': players,
-      'events': events,
-      'confirmations': confirmations,
-    }
-    print json.dumps(output, indent=2, sort_keys=True)
+    res = '{\n'
+    res += compact_json('players', players)
+    res += compact_json('planets', planets)
+    res += compact_json('events', events)
+    res += '}'
+    print res
 
 if __name__ == "__main__":
   main()
