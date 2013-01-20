@@ -73,4 +73,9 @@ public class LandingEvent implements Event {
     {
         this._shipRemainingCount = remaining;
     }
+
+    @Override
+    public int getFlightDuration() {
+        return -1;
+    }
 }

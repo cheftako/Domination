@@ -13,13 +13,15 @@ public class LaunchEvent implements Event {
     private final Size _size;
     private final int _owner;
     private final int _sentShipCount;
+    private final int _flightDuration;
 
-    public LaunchEvent(Integer _origin, Integer _destination, Size _size, int owner, int sentShipCount) {
+    public LaunchEvent(Integer _origin, Integer _destination, Size _size, int owner, int sentShipCount, int _flightDuration) {
         this._origin = _origin;
         this._destination = _destination;
         this._size = _size;
         this._owner = owner;
         this._sentShipCount = sentShipCount;
+        this._flightDuration = _flightDuration;
     }
 
     @Override
@@ -55,5 +57,10 @@ public class LaunchEvent implements Event {
     @Override
     public int getAfterBattleShipCount() {
         return -1;
+    }
+
+    @Override
+    public int getFlightDuration() {
+        return this._flightDuration;
     }
 }
