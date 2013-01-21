@@ -1,0 +1,12 @@
+#!/bin/bash
+
+BASEDIR=`cd $(dirname $0) ; pwd`
+cd $BASEDIR
+
+EPOCH=`date +%s`
+REPLAY_FILE="visualizer/replay/$EPOCH"
+$BASEDIR/game.sh > $REPLAY_FILE.txt
+$BASEDIR/visualizer/parse-replay $REPLAY_FILE.txt > $REPLAY_FILE.json
+
+echo "Open this URL in your favorite browser that allows to run JavaScript from files (Firefox or Safari):"
+echo file://$BASEDIR/visualizer/index.html?game=replay/$EPOCH.json

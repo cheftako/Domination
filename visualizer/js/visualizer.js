@@ -132,7 +132,7 @@ var ScoreBoardSprite = function(rect, callback) {
     if (!currentGameReplay) return;
     currentGameReplay.players.forEach(function(player) {
       var lastX = 0;
-      var lastY = 0;
+      var lastY = self.rect.height;
       self.dx = self.rect.width / currentGameReplay.totalTurns;
       self.dy = self.rect.height / currentGameReplay.maxShips;
       var color = player.color;
@@ -148,6 +148,7 @@ var ScoreBoardSprite = function(rect, callback) {
   };
   self.draw = function(surface) {
     surface.blit(self.buffer, self.rect);
+    if (!currentGameReplay || !currentGameReplay.currentTurn) return;
     var x = self.rect.left + currentGameReplay.currentTurn.number * self.dx;
     gamejs.draw.line(surface, '#f00', [x, self.rect.top], [x, self.rect.bottom], 1);
   };
@@ -550,7 +551,7 @@ var GameScene = function() {
   };
   // Update
   self.update = function(msDuration) {
-    if (self.isPlaying) {
+    if (self.isPlaying && currentGameReplay && currentGameReplay.currentTurn) {
       self.lastTurnTick += msDuration;
       if (self.lastTurnTick > self.turnSpeed) {
         self.lastTurnTick = 0;
@@ -810,9 +811,25 @@ function drawCenteredText(surface, x, y, font, color, text) {
 gamejs.ready(function () {
   canvasWidth = gamejs.display.getSurface().getSize()[0];
   canvasHeight = gamejs.display.getSurface().getSize()[1];
+  // read URL parameters and store them in the parameters object
+  var parameters = window.location.href;
+  var path;
+  var i;
+  if ((i = parameters.indexOf('?')) !== -1) {
+    parameters = parameters.substr(i + 1).split('#')[0].split('&');
+    for (i = 0; i < parameters.length; i++) {
+      var equalPos = parameters[i].indexOf('=');
+      var key = parameters[i].substr(0, equalPos);
+      var value = parameters[i].substr(equalPos + 1);
+      if (key == 'game') {
+        path = value;
+      }
+    }
+  }
+  if (!path) path = 'replay/test-replay.json';
   //director.push(new TitleScene("Galactic Domination"));
   currentGameReplay = new GameReplay();
   var gameScene = new GameScene();
   director.push(gameScene);
-  gameScene.load("test-replay.json");
+  gameScene.load(path);
 });
