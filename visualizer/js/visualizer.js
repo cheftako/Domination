@@ -9,7 +9,7 @@ var gamejs = require('gamejs');
 var $v = require('gamejs/utils/vectors');
 
 // Globals
-var director = new Director(20);
+var director = new Director(30);
 var currentGameReplay = null;     // Current game replay shown
 var fleetUniqueIdCounter = 0;
 
@@ -33,31 +33,35 @@ var PlayerSprite = function(id, rect) {
   PlayerSprite.superConstructor.apply(self, arguments);
   self.id = id;
   self.rect = new gamejs.Rect(rect);
+  self.buffer = new gamejs.Surface(self.rect.width, self.rect.height);
+  self.lastTurnRendered = null;
   self.player = null;
   self.nameRender = null;
   self.nameX = null;
   self.nameY = null;
   self.update = function(msDuration) {
-    if (currentGameReplay && self.player != currentGameReplay.players.get(self.id)) {
+    if (!currentGameReplay || self.lastTurnRendered == currentGameReplay.currentTurn) return;
+    self.lastTurnRendered = currentGameReplay.currentTurn;
+    self.buffer.clear();
+    if (!currentGameReplay.currentTurn) return;
+    if (self.player != currentGameReplay.players.get(self.id)) {
       self.player = currentGameReplay.players.get(self.id);
       if (!self.player) return;
       self.nameRender = playerNameFont.render(self.player.name, '#000');
-      self.nameX = self.rect.left + 2;
-      self.nameY = self.rect.top + (self.rect.height - self.nameRender.getSize()[1]) / 2;
+      self.nameX = 2;
+      self.nameY = (self.rect.height - self.nameRender.getSize()[1]) / 2;
     }
-  };
-  self.draw = function(surface) {
     if (!currentGameReplay.currentTurn || !self.nameRender) return;
     player = currentGameReplay.currentTurn.players.get(self.id);
-    gamejs.draw.rect(surface, player.color, self.rect, 0);
-    gamejs.draw.rect(surface, 'rgba(0, 0, 0, 0.4)', self.rect, 2);
-    surface.blit(self.nameRender, [self.nameX, self.nameY]);
+    self.buffer.fill(player.color);
+    self.buffer.blit(self.nameRender, [self.nameX, self.nameY]);
     var textRender = gameFont.render(plural(player.ships, ' ship'), '#000');
-    var y = self.rect.top;
-    surface.blit(textRender, [self.rect.right - textRender.getSize()[0] - 4, y]);
-    y += textRender.getSize()[1] - 5;
+    self.buffer.blit(textRender, [self.rect.width - textRender.getSize()[0] - 4, -1]);
     textRender = gameFont.render(plural(player.planets, ' planet'), '#000');
-    surface.blit(textRender, [self.rect.right - textRender.getSize()[0] - 4, y]);
+    self.buffer.blit(textRender, [self.rect.width - textRender.getSize()[0] - 4, 12]);
+  };
+  self.draw = function(surface) {
+    surface.blit(self.buffer, self.rect);
   };
   return self;
 };
@@ -71,14 +75,20 @@ var TurnCounterSprite = function(rect) {
   var self = this;
   TurnCounterSprite.superConstructor.apply(self, arguments);
   self.rect = new gamejs.Rect(rect);
+  self.buffer = new gamejs.Surface(self.rect.width, self.rect.height);
+  self.lastTurnRendered = null;
   self.update = function(msDuration) {
-  };
-  self.draw = function(surface) {
+    if (!currentGameReplay || self.lastTurnRendered == currentGameReplay.currentTurn) return;
+    self.lastTurnRendered = currentGameReplay.currentTurn;
+    self.buffer.clear();
     if (!currentGameReplay.currentTurn) return;
     var textRender = gameFont.render(currentGameReplay.currentTurn.number + ' / ' + currentGameReplay.totalTurns + ' turns', '#000');
-    surface.blit(textRender, [self.rect.right - textRender.getSize()[0] - 4, self.rect.top - 1]);
+    self.buffer.blit(textRender, [self.rect.width - textRender.getSize()[0] - 4, - 1]);
     textRender = gameFont.render(plural(currentGameReplay.currentTurn.fleets.length, ' fleet'), '#000');
-    surface.blit(textRender, [self.rect.right - textRender.getSize()[0] - 4, self.rect.top + 14]);
+    self.buffer.blit(textRender, [self.rect.width - textRender.getSize()[0] - 4, 14]);
+  };
+  self.draw = function(surface) {
+    surface.blit(self.buffer, self.rect);
   };
   return self;
 };
@@ -94,29 +104,11 @@ var ScoreBoardSprite = function(rect, callback) {
   self.rect = new gamejs.Rect(rect);
   self.dx = 0;
   self.dy = 0;
-  self.stats = new gamejs.Surface(self.rect);
+  self.buffer = new gamejs.Surface(self.rect.width, self.rect.height);
+  self.lastTurnRendered = null;
   self.mousePressed = false;
   self.hovered = false;
   self.callback = callback;
-  self.updateStats = function() {
-    self.stats.fill('#ddd');
-    if (!currentGameReplay) return;
-    currentGameReplay.players.forEach(function(player) {
-      var lastX = 0;
-      var lastY = 0;
-      self.dx = self.rect.width / currentGameReplay.totalTurns;
-      self.dy = self.rect.height / currentGameReplay.maxShips;
-      var color = player.color;
-      for (var i = 0; i < currentGameReplay.totalTurns; i++) {
-        var p = currentGameReplay.turns[i].players.get(player.id);
-        var newX = i * self.dx;
-        var newY = self.rect.height - p.ships * self.dy;
-        gamejs.draw.line(self.stats, color, [lastX, lastY], [newX, newY], 2);
-        lastX = newX;
-        lastY = newY;
-      }
-    });
-  };
   self.handleEvent = function(event) {
     if (!currentGameReplay) return;
     if (event.type == gamejs.event.MOUSE_DOWN) {
@@ -134,9 +126,28 @@ var ScoreBoardSprite = function(rect, callback) {
     }
   };
   self.update = function(msDuration) {
+    if (!currentGameReplay || self.lastTurnRendered == currentGameReplay.turns[0]) return;
+    self.lastTurnRendered = currentGameReplay.turns[0];
+    self.buffer.fill('#eee');
+    if (!currentGameReplay) return;
+    currentGameReplay.players.forEach(function(player) {
+      var lastX = 0;
+      var lastY = 0;
+      self.dx = self.rect.width / currentGameReplay.totalTurns;
+      self.dy = self.rect.height / currentGameReplay.maxShips;
+      var color = player.color;
+      for (var i = 0; i < currentGameReplay.totalTurns; i++) {
+        var p = currentGameReplay.turns[i].players.get(player.id);
+        var newX = i * self.dx;
+        var newY = self.rect.height - p.ships * self.dy;
+        gamejs.draw.line(self.buffer, color, [lastX, lastY], [newX, newY], 2);
+        lastX = newX;
+        lastY = newY;
+      }
+    });
   };
   self.draw = function(surface) {
-    surface.blit(self.stats, self.rect);
+    surface.blit(self.buffer, self.rect);
     var x = self.rect.left + currentGameReplay.currentTurn.number * self.dx;
     gamejs.draw.line(surface, '#f00', [x, self.rect.top], [x, self.rect.bottom], 1);
   };
@@ -154,36 +165,40 @@ var UniverseSprite = function(rect) {
   var self = this;
   UniverseSprite.superConstructor.apply(self, arguments);
   self.rect = new gamejs.Rect(rect);
+  self.buffer = new gamejs.Surface(self.rect.width, self.rect.height);
+  self.lastTurnRendered = null;
   self.update = function(msDuration) {
-  };
-  // Draw for current turn
-  self.draw = function(surface) {
-    //gamejs.draw.rect(surface, '#000', self.rect, 0);
+    if (!currentGameReplay || self.lastTurnRendered == currentGameReplay.currentTurn) return;
+    self.lastTurnRendered = currentGameReplay.currentTurn;
+    self.buffer.clear();
     if (!currentGameReplay.currentTurn) return;
     currentGameReplay.currentTurn.planets.forEach(function(planet) {
-      gamejs.draw.circle(surface, playerColors[planet.owner], [planet.x, planet.y], planet.radius, 0);
-      gamejs.draw.circle(surface, 'rgba(0, 0, 0, 0.4)', [planet.x, planet.y], planet.radius, 4);
+      gamejs.draw.circle(self.buffer, playerColors[planet.owner], [planet.x, planet.y], planet.radius, 0);
+      gamejs.draw.circle(self.buffer, 'rgba(0, 0, 0, 0.4)', [planet.x, planet.y], planet.radius, 4);
       var textRender = gameFont.render(planet.ships, '#000');
       var ts = textRender.getSize();
       var x = planet.x - ts[0] / 2;
       var y = planet.y - ts[1] / 2 - 2;
-      surface.blit(textRender, [x, y]);
+      self.buffer.blit(textRender, [x, y]);
       y += ts[1];
       textRender = fleetFont.render(planet.id, 'rgba(50, 50, 50, 0.5)');
       ts = textRender.getSize();
       x = planet.x - ts[0] / 2;
-      surface.blit(textRender, [x, y]);
+      self.buffer.blit(textRender, [x, y]);
     });
     currentGameReplay.currentTurn.fleets.forEach(function(fleet) {
-      gamejs.draw.rect(surface, fleetColors[fleet.player], fleet.rect, 0);
+      gamejs.draw.rect(self.buffer, fleetColors[fleet.player], fleet.rect, 0);
       var textRender = fleetFont.render(fleet.ships, '#000');
-      surface.blit(textRender, fleet.rect.topleft);
-      //gamejs.draw.line(surface, fleetColors[fleet.player], [origin.x, origin.y], [destination.x, destination.y], 1);
+      self.buffer.blit(textRender, fleet.rect.topleft);
     });
   };
+  // Draw for current turn
+  self.draw = function(surface) {
+    surface.blit(self.buffer, self.rect);
+  };
   self.projectCoordinates = function(planets) {
-    var minx = 10000;
-    var miny = 10000;
+    var minx = 100000;
+    var miny = 100000;
     var maxx = 0;
     var maxy = 0;
     planets.forEach(function(planet) {
@@ -192,11 +207,11 @@ var UniverseSprite = function(rect) {
       maxx = Math.max(maxx, planet.x);
       maxy = Math.max(maxy, planet.y);
     });
-    var sx = (self.rect.right - self.rect.left) / (maxx - minx);
-    var sy = (self.rect.bottom - self.rect.top) / (maxy - miny);
+    var sx = (self.rect.width - 2 * maxPlanetRadius) / (maxx - minx);
+    var sy = (self.rect.height - 2 * maxPlanetRadius) / (maxy - miny);
     planets.forEach(function(planet) {
-      planet.x = self.rect.left + (planet.x - minx) * sx;
-      planet.y = self.rect.top + (planet.y - miny) * sy;
+      planet.x = maxPlanetRadius + (planet.x - minx) * sx;
+      planet.y = maxPlanetRadius + (planet.y - miny) * sy;
     });
   };
   return self;
@@ -447,7 +462,7 @@ var GameReplay = function() {
 var GameScene = function() {
   var self = this;
   // Settings
-  self.bgColor = '#eee';
+  self.bgColor = '#fff';
   self.messageFont = new gamejs.font.Font("14px Verdana");
   self.views = new gamejs.sprite.Group();
   // State
@@ -458,7 +473,6 @@ var GameScene = function() {
   self.load = function(path) {
     self.pause();
     currentGameReplay.load(path, self.universe);
-    self.scoreBoard.updateStats();
     if (!currentGameReplay.error) {
       self.play();
     }
@@ -529,7 +543,7 @@ var GameScene = function() {
       x += pwidth;
     }
   }
-  self.universe = new UniverseSprite([maxPlanetRadius, 70 + maxPlanetRadius, canvasWidth - 2 * maxPlanetRadius, canvasHeight - 70 - 2 * maxPlanetRadius]);
+  self.universe = new UniverseSprite([0, scoreBoardStartX, canvasWidth, canvasHeight - scoreBoardStartX]);
   self.views.add(self.universe);
   // Events
   self.handleEvent = function(event) {
