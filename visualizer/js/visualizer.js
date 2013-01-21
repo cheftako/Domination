@@ -809,6 +809,8 @@ function drawCenteredText(surface, x, y, font, color, text) {
  */
 
 gamejs.ready(function () {
+  canvasWidth = gamejs.display.getSurface().getSize()[0];
+  canvasHeight = gamejs.display.getSurface().getSize()[1];
   //director.push(new TitleScene("Galactic Domination"));
   currentGameReplay = new GameReplay();
   var gameScene = new GameScene();
