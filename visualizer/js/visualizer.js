@@ -14,9 +14,10 @@ var currentGameReplay = null;     // Current game replay shown
 var fleetUniqueIdCounter = 0;
 
 // Settings
+gamejs.preload(["restart.png", "start.png", "pause.png", "skip-backward.png", "skip-forward.png"]);
 var canvasWidth = 1000;
 var canvasHeight = 800;
-gamejs.preload(["restart.png", "start.png", "pause.png", "skip-backward.png", "skip-forward.png"]);
+var maxPlanetRadius = 30;
 var playerColors = { 0: '#bbb', 1: '#f0f', 2: '#0ff', 3: '#ff0' };
 var fleetColors = { 1: 'rgba(255, 0, 255, 0.2)', 2: 'rgba(0, 255, 255, 0.2)', 3: 'rgba(255, 255, 0, 0.2)' };
 var gameFont = new gamejs.font.Font("14px Verdana");
@@ -24,53 +25,7 @@ var playerNameFont = new gamejs.font.Font("18px Verdana");
 var fleetFont = new gamejs.font.Font("10px Verdana");
 
 /*
- * HashTable: unfortunately, JavaScript lacks one...
- */
-
-var HashTable = function(obj) {
-  var self = this;
-  self.length = 0;
-  self.items = {};
-  for (var p in obj) {
-    if (obj.hasOwnProperty(p)) {
-      self.items[p] = obj[p];
-      self.length++;
-    }
-  }
-  self.set = function(key, value) {
-    var previous;
-    if (self.has(key)) previous = self.items[key];
-    else self.length++;
-    self.items[key] = value;
-    return previous;
-  };
-  self.get = function(key) {
-    return self.has(key) ? self.items[key] : undefined;
-  };
-  self.has = function(key) {
-    return self.items.hasOwnProperty(key);
-  };
-  self.remove = function(key) {
-    if (self.has(key)) {
-      previous = self.items[key];
-      self.length--;
-      delete self.items[key];
-      return previous;
-    }
-    return undefined;
-  };
-  self.forEach = function(fn) {
-    for (var k in self.items) fn(self.items[k]);
-  };
-  self.clear = function() {
-      self.items = {};
-      self.length = 0;
-  };
-  return self;
-};
-
-/*
- * Player: Shows player name, color and current number of ships
+ * PlayerSprite: Shows player name, color and current number of ships
  */
 
 var PlayerSprite = function(id, rect) {
@@ -78,21 +33,61 @@ var PlayerSprite = function(id, rect) {
   PlayerSprite.superConstructor.apply(self, arguments);
   self.id = id;
   self.rect = new gamejs.Rect(rect);
+  self.player = null;
+  self.nameRender = null;
+  self.nameX = null;
+  self.nameY = null;
   self.update = function(msDuration) {
+    if (currentGameReplay && self.player != currentGameReplay.players.get(self.id)) {
+      self.player = currentGameReplay.players.get(self.id);
+      if (!self.player) return;
+      self.nameRender = playerNameFont.render(self.player.name, '#000');
+      self.nameX = self.rect.left + 2;
+      self.nameY = self.rect.top + (self.rect.height - self.nameRender.getSize()[1]) / 2;
+    }
   };
   self.draw = function(surface) {
-    if (!currentGameReplay.currentTurn) return;
+    if (!currentGameReplay.currentTurn || !self.nameRender) return;
     player = currentGameReplay.currentTurn.players.get(self.id);
     gamejs.draw.rect(surface, player.color, self.rect, 0);
     gamejs.draw.rect(surface, 'rgba(0, 0, 0, 0.4)', self.rect, 2);
-    var nameRender = playerNameFont.render(player.name, '#000');
-    surface.blit(nameRender, [self.rect.x + 2, self.rect.y]);
-    var shipsRender = gameFont.render(player.ships + ' ships', '#000');
-    surface.blit(shipsRender, [self.rect.right - shipsRender.getSize()[0] - 4, self.rect.top + (self.rect.height - shipsRender.getSize()[1]) / 2 ]);
+    surface.blit(self.nameRender, [self.nameX, self.nameY]);
+    var textRender = gameFont.render(plural(player.ships, ' ship'), '#000');
+    var y = self.rect.top;
+    surface.blit(textRender, [self.rect.right - textRender.getSize()[0] - 4, y]);
+    y += textRender.getSize()[1] - 5;
+    textRender = gameFont.render(plural(player.planets, ' planet'), '#000');
+    surface.blit(textRender, [self.rect.right - textRender.getSize()[0] - 4, y]);
   };
   return self;
 };
 gamejs.utils.objects.extend(PlayerSprite, gamejs.sprite.Sprite);
+
+/*
+ * TurnCounterSprite: Shows current turn number
+ */
+
+var TurnCounterSprite = function(rect) {
+  var self = this;
+  TurnCounterSprite.superConstructor.apply(self, arguments);
+  self.rect = new gamejs.Rect(rect);
+  //self.progressRect = new gamejs.Rect(rect);
+  //self.progressRect.height = 6;
+  //self.progressRect.top = self.rect.bottom - self.progressRect.height + 1;
+  self.update = function(msDuration) {
+  };
+  self.draw = function(surface) {
+    if (!currentGameReplay.currentTurn) return;
+    //self.progressRect.width = self.rect.width * currentGameReplay.currentTurn.number / currentGameReplay.totalTurns;
+    //gamejs.draw.rect(surface, '#bbb', self.progressRect, 0);
+    var textRender = gameFont.render(currentGameReplay.currentTurn.number + ' / ' + currentGameReplay.totalTurns + ' turns', '#000');
+    surface.blit(textRender, [self.rect.right - textRender.getSize()[0] - 4, self.rect.top - 1]);
+    textRender = gameFont.render(plural(currentGameReplay.currentTurn.fleets.length, ' fleet'), '#000');
+    surface.blit(textRender, [self.rect.right - textRender.getSize()[0] - 4, self.rect.top + 12]);
+  };
+  return self;
+};
+gamejs.utils.objects.extend(TurnCounterSprite, gamejs.sprite.Sprite);
 
 /*
  * ScoreBoard: Shows player info, current turn, total turns
@@ -102,9 +97,34 @@ var ScoreBoardSprite = function(rect) {
   var self = this;
   ScoreBoardSprite.superConstructor.apply(self, arguments);
   self.rect = new gamejs.Rect(rect);
+  self.dx = 0;
+  self.dy = 0;
+  self.stats = new gamejs.Surface(self.rect);
+  self.updateStats = function() {
+    self.stats.fill('#bbb');
+    if (!currentGameReplay) return;
+    currentGameReplay.players.forEach(function(player) {
+      var lastX = 0;
+      var lastY = 0;
+      self.dx = self.rect.width / currentGameReplay.totalTurns;
+      self.dy = self.rect.height / currentGameReplay.maxShips;
+      var color = player.color;
+      for (var i = 0; i < currentGameReplay.totalTurns; i++) {
+        var p = currentGameReplay.turns[i].players.get(player.id);
+        var newX = i * self.dx;
+        var newY = self.rect.height - p.ships * self.dy;
+        gamejs.draw.line(self.stats, color, [lastX, lastY], [newX, newY], 2);
+        lastX = newX;
+        lastY = newY;
+      }
+    });
+  };
   self.update = function(msDuration) {
   };
   self.draw = function(surface) {
+    surface.blit(self.stats, self.rect);
+    var x = self.rect.left + currentGameReplay.currentTurn.number * self.dx;
+    gamejs.draw.line(surface, '#f00', [x, self.rect.top], [x, self.rect.bottom], 1);
   };
   return self;
 };
@@ -206,16 +226,23 @@ var PlayerTurnInfo = function(other) {
   self.name = other.name;
   self.color = other.color;
   self.ships = other.ships;
+  self.planets = other.planets;
   self.aggregateShips = function(planets, fleets) {
     self.ships = 0;
-    planets.forEach(function(planet) { if (planet.owner == self.id) self.ships += planet.ships; });
+    self.planets = 0;
+    planets.forEach(function(planet) {
+      if (planet.owner == self.id) {
+        self.ships += planet.ships;
+        self.planets += 1;
+      }
+    });
     fleets.forEach(function(fleet) { if (fleet.player == self.id) self.ships += fleet.ships; });
   };
   self.clone = function() {
     return new PlayerTurnInfo(self);
   };
   self.toString = function() {
-    res = 'p' + self.id + ' s=' + self.ships + ' c=' + self.color + ' ';
+    res = 'p' + self.id + ' s=' + self.ships;
     return res;
   };
   return self;
@@ -256,7 +283,7 @@ var TurnInfo = function(other) {
   self.landing = [];                // Landing events on this turn
   self.toString = function() {
     var res = '[turn ' + self.number + ']: ';
-    self.players.forEach(function (player) { res += player.toString(); });
+    self.players.forEach(function (player) { res += player.toString() + ' '; });
     res += ', ' + self.departing.length + ' departing';
     return res + "\n";
   };
@@ -312,10 +339,13 @@ var TurnInfo = function(other) {
       else planet.turn = self.number;
       planet.updatePlanet();
     });
+    var maxShips = 0;
     self.players.forEach(function(player) {
       player.turn = self.number;
       player.aggregateShips(self.planets, self.fleets);
+      maxShips = Math.max(maxShips, player.ships);
     });
+    return maxShips;
   };
   return self;
 };
@@ -326,6 +356,7 @@ var GameReplay = function() {
   self.reset = function() {
     self.players = new HashTable();   // Players hashed by id
     self.planets = new HashTable();   // Planets from universe at start of game, hashed by planet id
+    self.maxShips = 0;
     self.turns = [];
     self.totalTurns = 0;
     self.currentTurn = null;
@@ -337,11 +368,13 @@ var GameReplay = function() {
     self.reset();
     try {
       var json = gamejs.http.load(path);
+      self.maxShips = 0;
       fleetUniqueIdCounter = 1;
       json.players.forEach(function(player) {
         player.turn = 0;
         player.color = playerColors[player.id];
         player.ships = 0;
+        player.planets = 0;
         self.players.set(player.id, new PlayerTurnInfo(player));
       });
       json.planets.forEach(function(planet) {
@@ -357,18 +390,18 @@ var GameReplay = function() {
       self.turns.push(previous);
       json.events.forEach(function(event) {
         while (previous.number < event.turn) {
-          previous.updateTurnState();
+          self.maxShips = Math.max(self.maxShips, previous.updateTurnState());
           var ti = previous.next();
           self.turns.push(ti);
           previous = ti;
         }
         if (event.turn == previous.number) previous.consumeEvent(event);
       });
-      previous.updateTurnState();
+      self.maxShips = Math.max(self.maxShips, previous.updateTurnState());
       // Add one last turn to show correct final player ship counts
       previous = previous.next();
       self.turns.push(previous);
-      previous.updateTurnState(1);
+      self.maxShips = Math.max(self.maxShips, previous.updateTurnState());
       self.currentTurn = self.turns[0];
       self.totalTurns = previous.number;
     } catch (err) {
@@ -385,7 +418,7 @@ var GameReplay = function() {
     if (number > self.totalTurns) number = self.totalTurns;
     if (self.turns.length) {
       self.currentTurn = self.turns[number];
-      self.message = self.currentTurn.toString();
+      //self.message = self.currentTurn.toString();
     } else {
       self.currentTurn = null;
     }
@@ -412,6 +445,7 @@ var GameScene = function() {
   self.load = function(path) {
     self.pause();
     currentGameReplay.load(path, self.universe);
+    self.scoreBoard.updateStats();
     if (!currentGameReplay.error) {
       self.play();
     }
@@ -437,11 +471,13 @@ var GameScene = function() {
     // Step 1 turn forward
     self.lastTurnTick = 0;
     currentGameReplay.moveTurn(1);
+    self.pause();
   };
   self.stepBackward = function() {
     // Step 1 turn backward
     self.lastTurnTick = 0;
     currentGameReplay.moveTurn(-1);
+    self.pause();
   };
   // Helpers
   self.addButton = function(rect, image, tooltip, onClick) {
@@ -456,19 +492,24 @@ var GameScene = function() {
   self.playButton = self.addButton([35, 0, 36, 34], "start.png" ,"Play/pause game", self.togglePlay);
   self.addButton([0, 35, 34, 34], "skip-backward.png", "Step one turn back", self.stepBackward);
   self.addButton([35, 35, 34, 34], "skip-forward.png", "Step one turn forward", self.stepForward);
-  self.scoreBoard = new ScoreBoardSprite([72, 0, canvasWidth - 72, 40]);
+  var scoreBoardStartX = 72;
+  var scoreBoardStartY = 0;
+  var scoreBoardHeight = 32;
+  var turnCounterSpriteWidth = 130;
+  var pheight = 32;
+  self.turnCounterSprite = new TurnCounterSprite([canvasWidth - turnCounterSpriteWidth, scoreBoardStartY, turnCounterSpriteWidth, pheight]);
+  self.views.add(self.turnCounterSprite);
+  self.scoreBoard = new ScoreBoardSprite([scoreBoardStartX, scoreBoardStartY + pheight, canvasWidth - scoreBoardStartX, scoreBoardStartY + 40]);
+  var pwidth = (canvasWidth - scoreBoardStartX - turnCounterSpriteWidth) / 3;
   self.views.add(self.scoreBoard);
-  var x = self.scoreBoard.rect.x;
-  var pwidth = 260;
-  var pheight = 26;
+  var x = scoreBoardStartX;
   for (var player_id in playerColors) {
     if (player_id > 0) {
-      self.views.add(new PlayerSprite(player_id, [x, self.scoreBoard.rect.y, pwidth, pheight]));
+      self.views.add(new PlayerSprite(player_id, [x, 0, pwidth, pheight]));
       x += pwidth;
     }
   }
-  var margin = 30;
-  self.universe = new UniverseSprite([margin, 70 + margin, canvasWidth - 2 * margin, canvasHeight - 70 - 2 * margin]);
+  self.universe = new UniverseSprite([maxPlanetRadius, 70 + maxPlanetRadius, canvasWidth - 2 * maxPlanetRadius, canvasHeight - 70 - 2 * maxPlanetRadius]);
   self.views.add(self.universe);
   // Events
   self.handleEvent = function(event) {
@@ -479,7 +520,8 @@ var GameScene = function() {
     if (self.isPlaying) {
       self.lastTurnTick += msDuration;
       if (self.lastTurnTick > self.turnSpeed) {
-        self.stepForward();
+        self.lastTurnTick = 0;
+        currentGameReplay.moveTurn(1);
         if (currentGameReplay.currentTurn.number >= currentGameReplay.totalTurns) self.pause();
       }
     }
@@ -653,21 +695,66 @@ gamejs.utils.objects.extend(Button, gamejs.sprite.Sprite);
  * Helpers
  */
 
+/*
+ * HashTable: unfortunately, JavaScript lacks one...
+ */
+
+var HashTable = function(obj) {
+  var self = this;
+  self.length = 0;
+  self.items = {};
+  for (var p in obj) {
+    if (obj.hasOwnProperty(p)) {
+      self.items[p] = obj[p];
+      self.length++;
+    }
+  }
+  self.set = function(key, value) {
+    var previous;
+    if (self.has(key)) previous = self.items[key];
+    else self.length++;
+    self.items[key] = value;
+    return previous;
+  };
+  self.get = function(key) {
+    return self.has(key) ? self.items[key] : undefined;
+  };
+  self.has = function(key) {
+    return self.items.hasOwnProperty(key);
+  };
+  self.remove = function(key) {
+    if (self.has(key)) {
+      previous = self.items[key];
+      self.length--;
+      delete self.items[key];
+      return previous;
+    }
+    return undefined;
+  };
+  self.forEach = function(fn) {
+    for (var k in self.items) fn(self.items[k]);
+  };
+  self.clear = function() {
+      self.items = {};
+      self.length = 0;
+  };
+  return self;
+};
+
+function plural(count, text) {
+  if (count === 1) return count + text;
+  return count + text + 's';
+}
+
 function planetSize(ships) {
   if (ships < 20) return 0;
   if (ships < 50) return 1;
   return 2;
 }
 
-function simpleCopy(obj) {
-  var res = {};
-  for (var key in obj) res[key] = obj[key];
-  return res;
-}
-
 function centeredPosition(r1, r2) {
-  var x0 = (r1.width - r2[0]) / 2 + r1.x;
-  var y0 = (r1.height - r2[1]) / 2 + r1.y;
+  var x0 = r1.left + (r1.width - r2[0]) / 2;
+  var y0 = r1.top + (r1.height - r2[1]) / 2;
   return [x0, y0];
 }
 
