@@ -111,7 +111,7 @@ public class Game {
         for (Event event : playerEvents)
         {
             System.out.println("[" + _turnNumber + "] Player " + event.getFleetOwner() + " launched " + event.getSentShipCount() +
-            " ships to planet " + event.getToPlanet() + " from planet " + event.getFromPlanet());
+            " ships to planet " + event.getToPlanet() + " from planet " + event.getFromPlanet() + ", lands in " + event.getFlightDuration() + " turns");
         }
     }
 
@@ -358,7 +358,8 @@ public class Game {
                     fleet.get_destination(),
                     Size.getSizeForNumber(fleet.getSize()),
                     fleet.getOwner(),
-                    fleet.getSize());
+                    fleet.getSize(),
+                    fleet.getTurnsRemaining());
             launchEvents.add(event);
         }
         return launchEvents;

@@ -1,14 +1,46 @@
 #!/usr/bin/env python
 
+from collections import defaultdict
 import optparse
 import re
-import json
 import sys
 
 PLANET_INFO = re.compile(r"^Planet\(([0-9]+)\) x=([0-9]+), y=([0-9]+), size=.+, population=([0-9]+), owner=([0-9])$")
 PLAYER_INFO = re.compile(r"^(.+) is player ([0-9])$")
-EVENT_INFO1 = re.compile(r"\[([0-9]+)\] Player ([0-9]+) launched ([0-9]+) ships to planet ([0-9]+) from planet ([0-9]+)")
+EVENT_INFO1 = re.compile(r"\[([0-9]+)\] Player ([0-9]+) launched ([0-9]+) ships to planet ([0-9]+) from planet ([0-9]+), lands in ([0-9]+) turns")
 EVENT_INFO2 = re.compile(r"\[([0-9]+)\] Player ([0-9]+) landed ([0-9]+) ships on planet ([0-9]+) and ended up with ([0-9]+) ships")
+NUMBER = re.compile(r"[0-9]+")
+
+def compact_json(name, array):
+  """ Compact JSON representation of simple, one-level 'array', used to generate a much more compact JSON representation ... """
+  res = '"%s": [\n' % name
+  for item in array:
+    res += '  {'
+    for key in sorted(item):
+      if NUMBER.match(str(item[key])):
+        res += '"%s": %s, ' % (key, item[key])
+      else:
+        res += '"%s": "%s", ' % (key, item[key])
+    res += "},\n"
+  return res + '],\n'
+
+def process_ev2(confirmations, events):
+  for planet_id in confirmations:
+    turn = 0
+    winner = 0
+    ships = 0
+    for c in confirmations[planet_id]:
+      turn = c['turn']
+      if c['ships'] > ships:
+        ships = c['ships']
+        winner = c['player']
+    events.append({
+      'turn': turn,
+      'planet': planet_id,
+      'player': winner,
+      'ships': ships,
+    })
+  return defaultdict(list)
 
 def main():
   parser = optparse.OptionParser(description="Generate a JSON from game.sh output")
@@ -22,7 +54,8 @@ def main():
     planets = list()
     players = list()
     events = list()
-    confirmations = list()
+    confirmations = defaultdict(list)
+    turn = 0
     n = 0
     for line in fh:
       n += 1
@@ -40,45 +73,67 @@ def main():
          'id': int(planet_info.group(1)),
          'x': int(planet_info.group(2)),
          'y': int(planet_info.group(3)),
-         'population': int(planet_info.group(4)),
+         'ships': int(planet_info.group(4)),
          'owner': int(planet_info.group(5)),
         })
       elif player_info:
+        name = player_info.group(1)
+        player_id = int(player_info.group(2))
+        if name == 'Stupid player':
+          name = 'Player %s' % (len(players) + 1)
         players.append({
-          'id': int(player_info.group(2)),
-          'name': player_info.group(1)
+          'id': player_id,
+          'name': name
         })
       elif ev1:
+        ev1turn = int(ev1.group(1))
+        if turn != ev1turn:
+          confirmations = process_ev2(confirmations, events)
+        turn = ev1turn
+        player = int(ev1.group(2))
+        ships = int(ev1.group(3))
+        destination = int(ev1.group(4))
+        origin = int(ev1.group(5))
+        duration = int(ev1.group(6))
         events.append({
-          'turn': int(ev1.group(1)),
-          'player': int(ev1.group(2)),
-          'ships': int(ev1.group(3)),
-          'to': int(ev1.group(4)),
-          'from': int(ev1.group(5)),
+          'turn': turn,
+          'player': player,
+          'ships': ships,
+          'destination': destination,
+          'origin': origin,
+          'duration': duration,
         })
       elif ev2:
-        confirmations.append({
-          'turn': int(ev2.group(1)),
-          'player': int(ev2.group(2)),
-          'land_ships': int(ev2.group(3)),
-          'planet': int(ev2.group(4)),
-          'ships': int(ev2.group(5)),
+        ev2turn = int(ev2.group(1))
+        if (turn != ev2turn):
+          confirmations = process_ev2(confirmations, events)
+        turn = ev2turn
+        player = int(ev2.group(2))
+        #landed_ships = int(ev2.group(3))
+        planet = int(ev2.group(4))
+        ships = int(ev2.group(5))
+        confirmations[planet].append({
+          'turn': turn,
+          'player': player,
+          'planet': planet,
+          'ships': ships
         })
       else:
         sys.exit("Line %s not recognized: %s" % (n, line))
+
+    confirmations = process_ev2(confirmations, events)
 
     while len(players) < 3:
       players.append({
         'id': len(players) + 1, 'name': "Player %s" % (len(players) + 1)
       })
 
-    output = {
-      'planets': planets,
-      'players': players,
-      'events': events,
-      'confirmations': confirmations,
-    }
-    print json.dumps(output, indent=2, sort_keys=True)
+    res = '{\n'
+    res += compact_json('players', players)
+    res += compact_json('planets', planets)
+    res += compact_json('events', events)
+    res += '}'
+    print res
 
 if __name__ == "__main__":
   main()

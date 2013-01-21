@@ -24,4 +24,6 @@ public interface Event
 
     public int getSentShipCount();
     public int getAfterBattleShipCount();
+
+    public int getFlightDuration();
 }

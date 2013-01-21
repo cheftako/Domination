@@ -20,13 +20,8 @@ public class Universe
         return getTimeToTravel(_planets.get(planetOne), _planets.get(planetTwo));
     }
 
-    public static int getTimeToTravel(Planet first, Planet second)
+    public static double getPlanetDistance(Planet first, Planet second)
     {
-        if (first == null || second == null)
-        {
-            return 0;
-        }
-
         if (first == null || second == null)
         {
             return 0;
@@ -35,9 +30,12 @@ public class Universe
         int a = first.getX() - second.getX();
         int b = first.getY() - second.getY();
         double c2 = a * a + b * b;
-        double c = Math.sqrt(c2);
-        return roundToNextTen(c);
+        return Math.sqrt(c2);
+    }
 
+    public static int getTimeToTravel(Planet first, Planet second)
+    {
+        return roundToNextTen(getPlanetDistance(first, second));
     }
 
     private static int roundToNextTen(double c)
