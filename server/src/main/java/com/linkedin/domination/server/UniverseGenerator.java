@@ -12,6 +12,8 @@ import java.util.*;
  */
 public class UniverseGenerator {
 
+    public static double MIN_PLANET_DISTANCE = 80;   // Minimum planet distance, in pixels
+
     private Random _random;
     private int _size;
     private int _width;
@@ -86,7 +88,7 @@ public class UniverseGenerator {
     {
         for (Planet existingPlanet : planets)
         {
-            if (Universe.getTimeToTravel(planet, existingPlanet) < 2)
+            if (Universe.getTimeToTravel(planet, existingPlanet) < 2 || Universe.getPlanetDistance(planet, existingPlanet) < MIN_PLANET_DISTANCE)
             {
                 return false;
             }
