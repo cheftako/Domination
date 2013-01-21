@@ -71,19 +71,14 @@ var TurnCounterSprite = function(rect) {
   var self = this;
   TurnCounterSprite.superConstructor.apply(self, arguments);
   self.rect = new gamejs.Rect(rect);
-  //self.progressRect = new gamejs.Rect(rect);
-  //self.progressRect.height = 6;
-  //self.progressRect.top = self.rect.bottom - self.progressRect.height + 1;
   self.update = function(msDuration) {
   };
   self.draw = function(surface) {
     if (!currentGameReplay.currentTurn) return;
-    //self.progressRect.width = self.rect.width * currentGameReplay.currentTurn.number / currentGameReplay.totalTurns;
-    //gamejs.draw.rect(surface, '#bbb', self.progressRect, 0);
     var textRender = gameFont.render(currentGameReplay.currentTurn.number + ' / ' + currentGameReplay.totalTurns + ' turns', '#000');
     surface.blit(textRender, [self.rect.right - textRender.getSize()[0] - 4, self.rect.top - 1]);
     textRender = gameFont.render(plural(currentGameReplay.currentTurn.fleets.length, ' fleet'), '#000');
-    surface.blit(textRender, [self.rect.right - textRender.getSize()[0] - 4, self.rect.top + 12]);
+    surface.blit(textRender, [self.rect.right - textRender.getSize()[0] - 4, self.rect.top + 14]);
   };
   return self;
 };
@@ -93,15 +88,18 @@ gamejs.utils.objects.extend(TurnCounterSprite, gamejs.sprite.Sprite);
  * ScoreBoard: Shows player info, current turn, total turns
  */
 
-var ScoreBoardSprite = function(rect) {
+var ScoreBoardSprite = function(rect, callback) {
   var self = this;
   ScoreBoardSprite.superConstructor.apply(self, arguments);
   self.rect = new gamejs.Rect(rect);
   self.dx = 0;
   self.dy = 0;
   self.stats = new gamejs.Surface(self.rect);
+  self.mousePressed = false;
+  self.hovered = false;
+  self.callback = callback;
   self.updateStats = function() {
-    self.stats.fill('#bbb');
+    self.stats.fill('#ddd');
     if (!currentGameReplay) return;
     currentGameReplay.players.forEach(function(player) {
       var lastX = 0;
@@ -118,6 +116,22 @@ var ScoreBoardSprite = function(rect) {
         lastY = newY;
       }
     });
+  };
+  self.handleEvent = function(event) {
+    if (!currentGameReplay) return;
+    if (event.type == gamejs.event.MOUSE_DOWN) {
+      self.mousePressed = self.hovered;
+    } else if (event.type == gamejs.event.MOUSE_MOTION) {
+      self.hovered = self.rect.collidePoint(event.pos);
+      if (self.mousePressed && self.hovered) {
+        self.callback(Math.round((event.pos[0] - self.rect.left) / self.dx));
+      }
+    } else if (event.type == gamejs.event.MOUSE_UP) {
+      if (self.mousePressed && self.hovered) {
+        self.callback(Math.round((event.pos[0] - self.rect.left) / self.dx));
+      }
+      self.mousePressed = false;
+    }
   };
   self.update = function(msDuration) {
   };
@@ -308,7 +322,6 @@ var TurnInfo = function(other) {
       var planet = self.planets.get(fleet.origin);
       var s0 = planet.ships;
       planet.ships -= fleet.ships;
-      //if (planet.ships < 0) alert('c0 ' + fleet.toString() + ' (' + planet.ships + ' was ' + s0 + ')');
       if (planet.ships < 0) planet.ships = 0;   // Try compensate for a bug on producer side
     });
     var arriving = [];
@@ -456,10 +469,12 @@ var GameScene = function() {
     self.play();
   };
   self.play = function() {
+    if (self.isPlaying) return;
     self.isPlaying = true;
     self.playButton.image = "pause.png";
   };
   self.pause = function() {
+    if (!self.isPlaying) return;
     self.isPlaying = false;
     self.playButton.image = "start.png";
   };
@@ -477,6 +492,11 @@ var GameScene = function() {
     // Step 1 turn backward
     self.lastTurnTick = 0;
     currentGameReplay.moveTurn(-1);
+    self.pause();
+  };
+  self.jumpToTurn = function(turn) {
+    self.lastTurnTick = self.turnSpeed + 1;
+    currentGameReplay.setTurn(turn);
     self.pause();
   };
   // Helpers
@@ -499,7 +519,7 @@ var GameScene = function() {
   var pheight = 32;
   self.turnCounterSprite = new TurnCounterSprite([canvasWidth - turnCounterSpriteWidth, scoreBoardStartY, turnCounterSpriteWidth, pheight]);
   self.views.add(self.turnCounterSprite);
-  self.scoreBoard = new ScoreBoardSprite([scoreBoardStartX, scoreBoardStartY + pheight, canvasWidth - scoreBoardStartX, scoreBoardStartY + 40]);
+  self.scoreBoard = new ScoreBoardSprite([scoreBoardStartX, scoreBoardStartY + pheight, canvasWidth - scoreBoardStartX, scoreBoardStartY + 40], self.jumpToTurn);
   var pwidth = (canvasWidth - scoreBoardStartX - turnCounterSpriteWidth) / 3;
   self.views.add(self.scoreBoard);
   var x = scoreBoardStartX;
