@@ -413,25 +413,24 @@ var GameReplay = function() {
       });
       universe.projectCoordinates(self.planets);
       self.turns = [];
-      // Generate one turn info object per turn, to be able to show game at any turn with calculating stuff
-      var previous = new TurnInfo(self);
-      self.turns.push(previous);
+      // Generate one turn info object per turn, to be able to show game at any turn without recalculating stuff all the time
+      var currentInfo = new TurnInfo(self);
+      self.turns.push(currentInfo);
       json.events.forEach(function(event) {
-        while (previous.number < event.turn) {
-          self.maxShips = Math.max(self.maxShips, previous.updateTurnState());
-          var ti = previous.next();
-          self.turns.push(ti);
-          previous = ti;
+        while (currentInfo.number < event.turn) {
+          self.maxShips = Math.max(self.maxShips, currentInfo.updateTurnState());
+          currentInfo = currentInfo.next();
+          self.turns.push(currentInfo);
         }
-        if (event.turn == previous.number) previous.consumeEvent(event);
+        if (event.turn == currentInfo.number) currentInfo.consumeEvent(event);
       });
-      self.maxShips = Math.max(self.maxShips, previous.updateTurnState());
+      self.maxShips = Math.max(self.maxShips, currentInfo.updateTurnState());
       // Add one last turn to show correct final player ship counts
-      previous = previous.next();
-      self.turns.push(previous);
-      self.maxShips = Math.max(self.maxShips, previous.updateTurnState());
+      currentInfo = currentInfo.next();
+      self.turns.push(currentInfo);
+      self.maxShips = Math.max(self.maxShips, currentInfo.updateTurnState());
       self.currentTurn = self.turns[0];
-      self.totalTurns = previous.number;
+      self.totalTurns = currentInfo.number;
     } catch (err) {
       self.reset();
       self.error = "Can't load game replay:\n" + err;
@@ -758,7 +757,7 @@ var HashTable = function(obj) {
   };
   self.remove = function(key) {
     if (self.has(key)) {
-      previous = self.items[key];
+      var previous = self.items[key];
       self.length--;
       delete self.items[key];
       return previous;
