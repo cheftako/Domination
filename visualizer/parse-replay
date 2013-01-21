@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+from collections import defaultdict
 import optparse
 import re
 import sys
@@ -15,13 +16,31 @@ def compact_json(name, array):
   res = '"%s": [\n' % name
   for item in array:
     res += '  {'
-    for key in item:
+    for key in sorted(item):
       if NUMBER.match(str(item[key])):
         res += '"%s": %s, ' % (key, item[key])
       else:
         res += '"%s": "%s", ' % (key, item[key])
     res += "},\n"
   return res + '],\n'
+
+def process_ev2(confirmations, events):
+  for planet_id in confirmations:
+    turn = 0
+    winner = 0
+    ships = 0
+    for c in confirmations[planet_id]:
+      turn = c['turn']
+      if c['ships'] > ships:
+        ships = c['ships']
+        winner = c['player']
+    events.append({
+      'turn': turn,
+      'planet': planet_id,
+      'player': winner,
+      'ships': ships,
+    })
+  return defaultdict(list)
 
 def main():
   parser = optparse.OptionParser(description="Generate a JSON from game.sh output")
@@ -35,6 +54,8 @@ def main():
     planets = list()
     players = list()
     events = list()
+    confirmations = defaultdict(list)
+    turn = 0
     n = 0
     for line in fh:
       n += 1
@@ -56,12 +77,19 @@ def main():
          'owner': int(planet_info.group(5)),
         })
       elif player_info:
+        name = player_info.group(1)
+        player_id = int(player_info.group(2))
+        if name == 'Stupid player':
+          name = 'Player %s' % (len(players) + 1)
         players.append({
-          'id': int(player_info.group(2)),
-          'name': player_info.group(1)
+          'id': player_id,
+          'name': name
         })
       elif ev1:
-        turn = int(ev1.group(1))
+        ev1turn = int(ev1.group(1))
+        if turn != ev1turn:
+          confirmations = process_ev2(confirmations, events)
+        turn = ev1turn
         player = int(ev1.group(2))
         ships = int(ev1.group(3))
         destination = int(ev1.group(4))
@@ -76,9 +104,24 @@ def main():
           'duration': duration,
         })
       elif ev2:
-        pass
+        ev2turn = int(ev2.group(1))
+        if (turn != ev2turn):
+          confirmations = process_ev2(confirmations, events)
+        turn = ev2turn
+        player = int(ev2.group(2))
+        #landed_ships = int(ev2.group(3))
+        planet = int(ev2.group(4))
+        ships = int(ev2.group(5))
+        confirmations[planet].append({
+          'turn': turn,
+          'player': player,
+          'planet': planet,
+          'ships': ships
+        })
       else:
         sys.exit("Line %s not recognized: %s" % (n, line))
+
+    confirmations = process_ev2(confirmations, events)
 
     while len(players) < 3:
       players.append({

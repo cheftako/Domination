@@ -184,6 +184,7 @@ gamejs.utils.objects.extend(UniverseSprite, gamejs.sprite.Sprite);
 
 var PlanetTurnInfo = function(other) {
   var self = this;
+  self.turn = other.turn;
   self.id = other.id;
   self.owner = other.owner;
   self.ships = other.ships;
@@ -191,16 +192,15 @@ var PlanetTurnInfo = function(other) {
   self.y = other.y;
   self.size = other.size;
   self.radius = other.radius;
-  self.updateSize = function() {
-    self.size = planetSize(self.ships);
-    self.radius = 12 + self.size * 2;
-  };
-  self.grow = function() {
+  self.updatePlanet = function() {
     // Grow the ships on each planet, as defined in https://github.com/cheftako/Domination/blob/master/server/src/main/java/com/linkedin/domination/server/Game.java
-    if (self.owner) {
+    if (self.turn && self.owner) {
       if (self.size) self.ships += self.size * 2;
       else self.ships += 1;
     }
+    self.size = planetSize(self.ships);
+    self.radius = Math.min(32, 12 + self.ships * 0.1);
+    self.radius = 16 + self.size * 4;
   };
   self.clone = function() {
     return new PlanetTurnInfo(self);
@@ -210,6 +210,7 @@ var PlanetTurnInfo = function(other) {
 
 var PlayerTurnInfo = function(other) {
   var self = this;
+  self.turn = other.turn;
   self.id = other.id;
   self.name = other.name;
   self.color = other.color;
@@ -236,7 +237,8 @@ var FleetTurnInfo = function(other) {
   self.duration = other.duration;
   self.turnsRemaining = other.turnsRemaining || other.duration;
   self.toString = function() {
-    return 'f' + self.id + ': [' + self.origin + '->' + self.destination + ' p=' + self.player + ', s=' + self.ships + ', tr=' + this.turnsRemaining + ']';
+    return 'f' + self.id + ': [' + self.turn + ']' + ' ' + self.origin + '->' + self.destination +
+      ' p=' + self.player + ', s=' + self.ships + ', tr=' + this.turnsRemaining;
   };
   self.clone = function() {
     return new FleetTurnInfo(self);
@@ -256,12 +258,11 @@ var TurnInfo = function(other) {
     if (other.fleets) other.fleets.forEach(function(fleet) { self.fleets.set(fleet.id, fleet.clone()); });
   }
   self.departing = [];              // Fleets taking off on this turn
-  self.arriving = [];               // Fleets landing on this turn
+  self.landing = [];                // Landing events on this turn
   self.toString = function() {
     var res = '[turn ' + self.number + ']: ';
     self.players.forEach(function (player) { res += 'p' + player.id + ':' + player.ships + ' '; });
     res += ', ' + self.departing.length + ' departing';
-    res += ', ' + self.arriving.length + ' arriving';
     res += ' p24: [' + self.planets.get(24).owner + ', ' + self.planets.get(24).ships + ']';
     return res + "\n";
   };
@@ -270,39 +271,47 @@ var TurnInfo = function(other) {
     nextTurn.number = self.number + 1;
     return nextTurn;
   };
-  self.addFleet = function(event) {
-    fleet = new FleetTurnInfo(event);
-    fleet.id = fleetUniqueIdCounter++;
-    self.departing.push(fleet);
+  self.consumeEvent = function(event) {
+    if (event.duration) {
+      fleet = new FleetTurnInfo(event);
+      fleet.id = fleetUniqueIdCounter++;
+      self.departing.push(fleet);
+    } else {
+      self.landing.push(event);
+    }
   };
-  self.update = function() {
+  self.updateTurnState = function(skipGrow) {
     self.departing.forEach(function(fleet) {
       // Transfer departing
       self.fleets.set(fleet.id, fleet);
-      self.planets.get(fleet.origin).ships -= fleet.ships;
+      var planet = self.planets.get(fleet.origin);
+      var s0 = planet.ships;
+      planet.ships -= fleet.ships;
+      //if (planet.ships < 0) alert('c0 ' + fleet.toString() + ' (' + planet.ships + ' was ' + s0 + ')');
+      if (planet.ships < 0) planet.ships = 0;   // Try compensate for a bug on producer side
     });
+    var arriving = [];
     self.fleets.forEach(function(fleet) {
       fleet.turnsRemaining--;
-      if (!fleet.turnsRemaining) self.arriving.push(fleet);
+      if (!fleet.turnsRemaining) arriving.push(fleet);
     });
-    self.arriving.forEach(function(fleet) {
-      // Combat
+    arriving.forEach(function(fleet) {
       self.fleets.remove(fleet.id);
-      var planet = self.planets.get(fleet.destination);
-      if (fleet.player == planet.owner) {
-        planet.ships += fleet.ships;
-      } else if (fleet.ships > planet.ships) {
-        planet.ships = fleet.ships - planet.ships - 2;
-        planet.owner = planet.ships ? fleet.player : 0;
-      } else {
-        planet.ships -= fleet.ships;
-      }
+    });
+    self.landing.forEach(function(event) {
+      var planet = self.planets.get(event.planet);
+      planet.owner = event.player;
+      planet.ships = event.ships;
     });
     self.planets.forEach(function(planet) {
-      if (self.number) planet.grow();
-      planet.updateSize();
+      if (skipGrow) planet.turn = 0;
+      else planet.turn = self.number;
+      planet.updatePlanet();
     });
-    self.players.forEach(function(player) { player.aggregateShips(self.planets, self.fleets); });
+    self.players.forEach(function(player) {
+      player.turn = self.number;
+      player.aggregateShips(self.planets, self.fleets);
+    });
   };
   return self;
 };
@@ -326,13 +335,15 @@ var GameReplay = function() {
       var json = gamejs.http.load(path);
       fleetUniqueIdCounter = 1;
       json.players.forEach(function(player) {
+        player.turn = 0;
         player.color = playerColors[player.id];
         player.ships = 0;
         self.players.set(player.id, new PlayerTurnInfo(player));
       });
       json.planets.forEach(function(planet) {
+        planet.turn = 0;
         var pinfo = new PlanetTurnInfo(planet);
-        pinfo.updateSize();
+        pinfo.updatePlanet();
         self.planets.set(pinfo.id, pinfo);
       });
       universe.projectCoordinates(self.planets);
@@ -341,16 +352,19 @@ var GameReplay = function() {
       var previous = new TurnInfo(self);
       self.turns.push(previous);
       json.events.forEach(function(event) {
-        event.duration -= 1;
         while (previous.number < event.turn) {
-          previous.update();
+          previous.updateTurnState();
           var ti = previous.next();
           self.turns.push(ti);
           previous = ti;
         }
-        if (event.turn == previous.number) previous.addFleet(event);
+        if (event.turn == previous.number) previous.consumeEvent(event);
       });
-      previous.update();
+      previous.updateTurnState();
+      // Add one last turn to show correct final player ship counts
+      previous = previous.next();
+      self.turns.push(previous);
+      previous.updateTurnState(1);
       self.currentTurn = self.turns[0];
       self.totalTurns = previous.number;
     } catch (err) {
@@ -388,7 +402,7 @@ var GameScene = function() {
   self.views = new gamejs.sprite.Group();
   // State
   self.isPlaying = false;
-  self.turnSpeed = 200;       // Turn speed in milliseconds (how long to wait to go to next turn when playing)
+  self.turnSpeed = 100;       // Turn speed in milliseconds (how long to wait to go to next turn when playing)
   self.lastTurnTick = 0;      // Ticks since last turn played
   // Game control functions
   self.load = function(path) {
@@ -626,8 +640,6 @@ var Button = function(rect, onClick) {
       } else {
         gamejs.draw.rect(surface, 'rgba(220, 220, 0, 0.2)', self.rect, 0);
       }
-    //} else if (self.mousePressed) {
-    //  gamejs.draw.rect(surface, 'rgba(0, 0, 220, 0.3)', self.rect, 0);
     }
   };
   return self;
