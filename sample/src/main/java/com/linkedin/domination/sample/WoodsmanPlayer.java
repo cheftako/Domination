@@ -94,7 +94,6 @@ public class WoodsmanPlayer implements Player {
   public List<Move> makeMove(Universe universe, List<Event> events) {
     if (turn == 0) {
       initializeState(universe);
-      printDistanceDistribution(universe);
     } else { // update state!
       processTurn(universe, events);
     }
@@ -628,24 +627,6 @@ public class WoodsmanPlayer implements Player {
     else if (currentPop - (currentPop * fleetSizes.get(Move.FleetType.SCOUTING)) >= population) return Move.FleetType.SCOUTING;
     else return Move.FleetType.NONE; // Oops...
 
-  }
-
-  private void printDistanceDistribution(Universe u) {
-    Map<Integer, Integer> distances = new HashMap<Integer, Integer>();
-    for (Planet a : u.getPlanets()) {
-      for (Planet b : u.getPlanets()) {
-        if (!a.equals(b)) {
-          int distance = Universe.getTimeToTravel(a, b);
-          if (!distances.containsKey(distance))
-            distances.put(distance, 1);
-          else
-            distances.put(distance, distances.get(distance) + 1);
-        }
-      }
-    }
-    for (int i : distances.keySet()) {
-      System.out.println("Distance: " + i + ": " + distances.get(i));
-    }
   }
 }
 
