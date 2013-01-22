@@ -1,7 +1,6 @@
 package com.linkedin.domination.sample;
 
 import com.linkedin.domination.api.*;
-import sun.jvmstat.perfdata.monitor.PerfIntegerMonitor;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -12,8 +11,8 @@ public class SamplePlayer implements Player
 {
     private Integer _me = null;
 
-    private List<Integer> _targets = new ArrayList();
-    private List<Integer> _flee = new ArrayList();
+    private List<Integer> _targets = new ArrayList<Integer>();
+    private List<Integer> _flee = new ArrayList<Integer>();
 
     private static final Integer EARLY_MIN_LAUNCH_SIZE = 36;
     private static final Integer EARLY_LAUNCH_TURN = 100;
