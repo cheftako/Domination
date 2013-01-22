@@ -37,6 +37,7 @@ public class WoodsmanPlayer implements Player {
 
   private static final int MARGIN = 5;
   private static final int MAX_DISTANCE = 40;
+  private static final int PROD_TARGET_MAX_DISTANCE = 20;
   private static final int BOUNDARY_BONUS = 5;
   private static final int TARGET_BONUS = 3;
 
@@ -56,6 +57,7 @@ public class WoodsmanPlayer implements Player {
   private Map<Integer, Stats> universeState = new HashMap<Integer, Stats>();
   private Map<String, Stats> fleetState = new HashMap<String, Stats>();
   private Map<Integer, Role> myPlanets = new HashMap<Integer, Role>();
+  private Map<Integer, Integer> distanceFromEnemy = new HashMap<Integer, Integer>();
 
   static {
     sizeRanges = new HashMap<Size, List<Integer>>(3);
@@ -79,7 +81,8 @@ public class WoodsmanPlayer implements Player {
   private Map<Integer, Integer> recentAttacks = new HashMap<Integer, Integer>();
 
   private Set<Integer> raidTargets;
-  private Set<Integer> smashTargets;
+  private Map<Integer, Integer> smashTargets;
+  private Map<Integer, Integer> enemyAttacks;
 
 
   @Override
@@ -101,10 +104,14 @@ public class WoodsmanPlayer implements Player {
     // Alright! state updated (We hope!)
 
     raidTargets = new HashSet<Integer>();
-    smashTargets = new HashSet<Integer>();
+    smashTargets = new HashMap<Integer, Integer>();
     byPlanet = new HashMap<Integer, List<Event>>();
     incoming = new HashMap<Integer, List<Stats>>();
     reinforce = new HashMap<Integer, Integer>();
+    enemyAttacks = new HashMap<Integer, Integer>();
+    for (int i = 0; i < 3; i++) {
+      enemyAttacks.put(i, 0);
+    }
 
     // Sanity check for orders
     Collection<Planet> planets = universe.getPlanets();
@@ -183,6 +190,26 @@ public class WoodsmanPlayer implements Player {
         universeState.put(i, new Stats(s, s.getEstSize() + growth, null, null, null));
       }
     }
+    // Stats
+    for (Integer i : myPlanets.keySet()) {
+      int min_distance = Integer.MAX_VALUE;
+      for (Planet p : u.getPlanets()) {
+        if (p.getOwner() != me) {
+          int distance = u.getTimeToTravel(i, p.getId());
+          min_distance = Math.min(min_distance, distance);
+        }
+      }
+      distanceFromEnemy.put(i, min_distance);
+    }
+    /*
+    int maxAttacks = 1;
+    for (int i = 0; i < 3; i++) {
+      if (enemyAttacks.get(i) > maxAttacks) {
+        maxAttacks = enemyAttacks.get(i);
+        myTarget = i; // REVENGE!
+      }
+    }
+    */
 
   }
 
@@ -216,6 +243,8 @@ public class WoodsmanPlayer implements Player {
           if (!(incoming.containsKey(e.getToPlanet())))
             incoming.put(e.getToPlanet(), new LinkedList<Stats>());
           incoming.get(e.getToPlanet()).add(fleet);
+          enemyAttacks.put(e.getFleetOwner(), enemyAttacks.get(e.getFleetOwner()) + 1);
+
         }
         } catch (NullPointerException ex) {
           System.out.println("Null pointer what?");
@@ -463,7 +492,7 @@ public class WoodsmanPlayer implements Player {
 
     // Find a target
     int currentTarget = -1;
-    double bestScore = 30;
+    double bestScore = -30;
     for (Planet p : universe.getPlanets()) {
       if (Universe.getTimeToTravel(source, p) <= MAX_DISTANCE &&
               p.getOwner() != me) {
@@ -475,7 +504,10 @@ public class WoodsmanPlayer implements Player {
       }
     }
     if (currentTarget != -1) {
-      smashTargets.add(currentTarget);
+      if (!smashTargets.containsKey(currentTarget))
+        smashTargets.put(currentTarget, allowableFleetSize);
+      else
+        smashTargets.put(currentTarget, smashTargets.get(currentTarget) + allowableFleetSize);
       recentAttacks.put(currentTarget, Universe.getTimeToTravel(source, universe.getPlanetMap().get(currentTarget)));
       return new Move(planetID, currentTarget, fleetSize);
     } else {
@@ -508,7 +540,7 @@ public class WoodsmanPlayer implements Player {
       if (!reinforce.containsKey(currentTarget))
         reinforce.put(currentTarget, 1);
       else
-        reinforce.put(currentTarget, reinforce.get(currentTarget));
+        reinforce.put(currentTarget, reinforce.get(currentTarget) + 1);
       return new Move(planetID, currentTarget, fleetSize);
     } else {
       // no available worlds, become a fortress world /and skip turn to avoid infinite loop/
@@ -534,7 +566,7 @@ public class WoodsmanPlayer implements Player {
       score += fleetSize - pop;
     }
 
-    boolean boundary = nearBoundary(pop);
+    boolean boundary = nearBoundary(pop, time);
     if (boundary) score += BOUNDARY_BONUS;
 
     score += turn - target.getObservedTurn();
@@ -562,18 +594,19 @@ public class WoodsmanPlayer implements Player {
 
     Stats target = universeState.get(dest.getId());
     int pop = target.getEstSize();
-    score += Math.min(fleetSize - pop, 20);
+    //int effFleetSize = smashTargets.containsKey(dest.getId()) ? smashTargets.get(dest.getId()) + fleetSize : fleetSize;
+    score += Math.min(fleetSize - pop, 30);
 
     if (target.getOwner() == 0) score += TARGET_BONUS * 2;
     else if (neutralsOnly) return Double.NEGATIVE_INFINITY; // don't attack, we're only hunting neutrals;
 
-    boolean boundary = nearBoundary(pop);
+    boolean boundary = nearBoundary(pop, time);
     if (boundary) score += BOUNDARY_BONUS;
 
     Integer attacked = recentAttacks.get(dest.getId());
     if (attacked != null) score -= attacked;
 
-    if (smashTargets.contains(dest.getId()) && target.getOwner() != 0) score += 3;
+    if (smashTargets.containsKey(dest.getId()) && target.getOwner() != 0) score += 3;
 
     if (target.getOwner() == myTarget) score += TARGET_BONUS;
 
@@ -595,7 +628,7 @@ public class WoodsmanPlayer implements Player {
     double score = 0;
 
     if (dest.getOwner() != me) {
-      if (Universe.getTimeToTravel(source, dest) <= MAX_DISTANCE)
+      if (Universe.getTimeToTravel(source, dest) <= PROD_TARGET_MAX_DISTANCE)
         return (Universe.getTimeToTravel(source, dest) * -1) + 100;
       else return Double.NEGATIVE_INFINITY;
     }
@@ -603,6 +636,12 @@ public class WoodsmanPlayer implements Player {
       if (Role.PRODUCTION.equals(myPlanets.get(dest.getId())))
         return Double.NEGATIVE_INFINITY;
       score -= Universe.getTimeToTravel(source, dest);
+      Integer distToEnemy = distanceFromEnemy.get(dest.getId());
+      if (distToEnemy != null) {
+        score -= distToEnemy;
+      } else {
+        score -= MAX_DISTANCE;
+      }
       if (incoming.containsKey(dest.getId()))
         score += 3;
       if (reinforce.containsKey(dest.getId())) {
@@ -614,9 +653,25 @@ public class WoodsmanPlayer implements Player {
 
   }
 
-  private boolean nearBoundary(int population) {
-    return (!Size.getSizeForNumber(population).equals(Size.getSizeForNumber(population + MARGIN))) ||
-            (!Size.getSizeForNumber(population).equals(Size.getSizeForNumber(population - MARGIN)));
+  private boolean nearBoundary(int population, int timeToTravel) {
+    int growth = plusGrowth(population, timeToTravel);
+
+    return (!Size.getSizeForNumber(population + growth).equals(Size.getSizeForNumber(population + growth + MARGIN))) ||
+            (!Size.getSizeForNumber(population + growth).equals(Size.getSizeForNumber(population + growth - MARGIN)));
+  }
+
+  private int plusGrowth(int population, int timeToTravel) {
+    int growth = 0;
+    for (int i = 0; i < timeToTravel; i++) {
+      Size current = Size.getSizeForNumber(population + growth);
+      switch (current) {
+        case SMALL: growth += 1; break;
+        case MEDIUM: growth += 2; break;
+        case LARGE: growth += 3; break;
+        default: growth += 1;
+      }
+    }
+    return growth;
   }
 
   private Move.FleetType generateMaxFleetSize(Planet source, int population) {
