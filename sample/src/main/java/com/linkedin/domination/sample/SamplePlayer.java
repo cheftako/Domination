@@ -28,6 +28,11 @@ public class SamplePlayer implements Player
     }
 
     @Override
+    public String getPlayerName() {
+        return "Cowardly Lion";
+    }
+
+    @Override
     public void initialize(Integer playerNbr)
     {
         _me = playerNbr;

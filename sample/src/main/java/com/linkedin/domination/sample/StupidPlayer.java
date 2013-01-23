@@ -21,9 +21,13 @@ public class StupidPlayer implements Player
     }
 
     @Override
+    public String getPlayerName() {
+        return "Scarecrow";
+    }
+
+    @Override
     public void initialize(Integer playerNbr) {
         me = playerNbr;
-        System.out.println("Stupid player is player " + me);
     }
 
     @Override
