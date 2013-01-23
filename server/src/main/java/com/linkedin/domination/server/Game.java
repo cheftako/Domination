@@ -108,6 +108,7 @@ public class Game {
                         Planet friendlyPlanet = _universe.getPlanetMap().get(fleet.get_destination());
                         Planet updated = makePlanetWithNewOwnerAndSize(friendlyPlanet, fleet.getOwner(), friendlyPlanet.getPopulation() + fleet.getSize());
                         updatePlanet(updated);
+                        System.out.println(updated.toJson().replace("{turn}", _turnNumber + ""));
                     } else {
                         // combat setup
                         Planet conflictPlanet = _universe.getPlanetMap().get(fleet.get_destination());

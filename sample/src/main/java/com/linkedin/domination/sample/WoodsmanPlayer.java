@@ -252,7 +252,7 @@ public class WoodsmanPlayer implements Player {
 
         }
         } catch (NullPointerException ex) {
-          System.out.println("Null pointer what?");
+          //System.out.println("Null pointer what?");
         }
       } else {
         // Landing event
