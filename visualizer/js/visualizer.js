@@ -58,7 +58,7 @@ var PlayerSprite = function(id, rect) {
     self.buffer.blit(self.nameRender, [self.nameX, self.nameY]);
     var textRender = gameFont.render(plural(player.ships, ' ship'), '#000');
     self.buffer.blit(textRender, [self.rect.width - textRender.getSize()[0] - 4, -1]);
-    textRender = gameFont.render(plural(player.planets, ' planet'), '#000');
+    textRender = gameFont.render(player.planets + ' pl., ' + player.fleets + ' fl.', '#000');
     self.buffer.blit(textRender, [self.rect.width - textRender.getSize()[0] - 4, 12]);
   };
   self.draw = function(surface) {
@@ -135,12 +135,13 @@ var ScoreBoardSprite = function(rect, callback) {
       var lastX = 0;
       var lastY = self.rect.height;
       self.dx = self.rect.width / currentGameReplay.totalTurns;
-      self.dy = self.rect.height / currentGameReplay.maxShips;
+      // Small trick to enlarge ships graph around loosing player's max ships, as otherwise they get dwarfed by winner
+      self.dy = self.rect.height / currentGameReplay.loosingPlayersMaxShips / 1.4;
       var color = player.color;
       for (var i = 0; i < currentGameReplay.totalTurns; i++) {
         var p = currentGameReplay.turns[i].players.get(player.id);
         var newX = i * self.dx;
-        var newY = self.rect.height - p.ships * self.dy;
+        var newY = Math.max(0, self.rect.height - p.ships * self.dy);
         gamejs.draw.line(self.buffer, color, [lastX, lastY], [newX, newY], 2);
         lastX = newX;
         lastY = newY;
@@ -259,22 +260,29 @@ var PlayerTurnInfo = function(other) {
   self.color = other.color;
   self.ships = other.ships;
   self.planets = other.planets;
+  self.fleets = other.fleets;
   self.aggregateShips = function(planets, fleets) {
     self.ships = 0;
     self.planets = 0;
+    self.fleets = 0;
     planets.forEach(function(planet) {
       if (planet.owner == self.id) {
         self.ships += planet.ships;
         self.planets += 1;
       }
     });
-    fleets.forEach(function(fleet) { if (fleet.player == self.id) self.ships += fleet.ships; });
+    fleets.forEach(function(fleet) {
+      if (fleet.player == self.id) {
+        self.ships += fleet.ships;
+        self.fleets += 1;
+      }
+    });
   };
   self.clone = function() {
     return new PlayerTurnInfo(self);
   };
   self.toString = function() {
-    res = 'p' + self.id + ' s=' + self.ships;
+    res = 'p' + self.id + ' s=' + self.ships + ' f=' + self.fleets;
     return res;
   };
   return self;
@@ -391,6 +399,8 @@ var GameReplay = function() {
     self.turns = [];
     self.totalTurns = 0;
     self.currentTurn = null;
+    self.winningPlayer = null;
+    self.loosingPlayersMaxShips = 0;
     self.message = null;
     self.error = null;
   };
@@ -407,6 +417,7 @@ var GameReplay = function() {
         player.color = playerColors[player.id];
         player.ships = 0;
         player.planets = 0;
+        player.fleets = 0;
         self.players.set(player.id, new PlayerTurnInfo(player));
       });
       json.planets.forEach(function(planet) {
@@ -435,6 +446,14 @@ var GameReplay = function() {
       self.maxShips = Math.max(self.maxShips, currentInfo.updateTurnState());
       self.currentTurn = self.turns[0];
       self.totalTurns = currentInfo.number;
+      currentInfo.players.forEach(function(player) {
+        if (!self.winningPlayer || self.winningPlayer.ships < player.ships) self.winningPlayer = player;
+      });
+      self.turns.forEach(function(turnInfo) {
+        turnInfo.players.forEach(function(player) {
+          if (player.id != self.winningPlayer.id) self.loosingPlayersMaxShips = Math.max(self.loosingPlayersMaxShips, player.ships);
+        });
+      });
     } catch (err) {
       self.reset();
       self.error = "Can't load game replay:\n" + err;
