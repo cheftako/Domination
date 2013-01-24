@@ -12,6 +12,7 @@ var $v = require('gamejs/utils/vectors');
 var director = new Director(30);
 var currentGameReplay = null;     // Current game replay shown
 var fleetUniqueIdCounter = 0;
+var numberOfAlertsShown = 0;
 
 // Settings
 gamejs.preload(["restart.png", "start.png", "pause.png", "skip-backward.png", "skip-forward.png"]);
@@ -235,7 +236,8 @@ var PlanetTurnInfo = function(other) {
   self.radius = other.radius;
   self.updatePlanet = function() {
     // Grow the ships on each planet, as defined in https://github.com/cheftako/Domination/blob/master/server/src/main/java/com/linkedin/domination/server/Game.java
-    if (self.turn && self.owner) {
+    if (self.owner) {
+      self.size = planetSize(self.ships);
       if (self.size) self.ships += self.size * 2;
       else self.ships += 1;
     }
@@ -331,13 +333,14 @@ var TurnInfo = function(other) {
       self.landing.push(event);
     }
   };
-  self.updateTurnState = function(skipGrow) {
+  self.updateTurnState = function() {
     self.departing.forEach(function(fleet) {
       // Transfer departing
       self.fleets.set(fleet.id, fleet);
       var planet = self.planets.get(fleet.origin);
       var s0 = planet.ships;
       planet.ships -= fleet.ships;
+      if (planet.ships < 0) showAlert(planet.ships + " ships on planet " + planet.id + ' at turn ' + self.number);
       if (planet.ships < 0) planet.ships = 0;   // Try compensate for a bug on producer side
     });
     var arriving = [];
@@ -364,8 +367,7 @@ var TurnInfo = function(other) {
       planet.ships = event.ships;
     });
     self.planets.forEach(function(planet) {
-      if (skipGrow) planet.turn = 0;
-      else planet.turn = self.number;
+      planet.turn = self.number;
       planet.updatePlanet();
     });
     var maxShips = 0;
@@ -396,6 +398,7 @@ var GameReplay = function() {
     // Load game replay file, 'path' should be either an object or a path (file or http) to a json file
     self.reset();
     try {
+      numberOfAlertsShown = 0;
       var json = gamejs.http.load(path);
       self.maxShips = 0;
       fleetUniqueIdCounter = 1;
@@ -728,6 +731,11 @@ gamejs.utils.objects.extend(Button, gamejs.sprite.Sprite);
 /*
  * Helpers
  */
+
+function showAlert(msg) {
+  if (numberOfAlertsShown < 4) alert(msg);
+  numberOfAlertsShown++;
+}
 
 /*
  * HashTable: unfortunately, JavaScript lacks one...
