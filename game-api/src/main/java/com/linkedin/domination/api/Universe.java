@@ -10,6 +10,7 @@ import java.util.Map;
 public class Universe
 {
     private final Map<Integer, Planet> _planets;
+    public static final int DISTANCE_FOR_TURN = 20;
 
     public Universe(Map<Integer, Planet> _planets) {
         this._planets = _planets;
@@ -40,11 +41,11 @@ public class Universe
 
     private static int roundToNextTen(double c)
     {
-        int tens = (int) c / 10;
-        if (c % 10 > 0){
-            tens++;
+        int turns = (int) c / DISTANCE_FOR_TURN;
+        if (c % DISTANCE_FOR_TURN > 0){
+            turns++;
         }
-        return tens;
+        return turns;
     }
 
     public Map<Integer, Planet> getPlanetMap()
