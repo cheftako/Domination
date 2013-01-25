@@ -237,13 +237,12 @@ var PlanetTurnInfo = function(other) {
   self.radius = other.radius;
   self.updatePlanet = function() {
     // Grow the ships on each planet, as defined in https://github.com/cheftako/Domination/blob/master/server/src/main/java/com/linkedin/domination/server/Game.java
-    if (self.owner) {
+    if (self.turn && self.owner) {
       self.size = planetSize(self.ships);
       if (self.size) self.ships += self.size * 2;
       else self.ships += 1;
     }
     self.size = planetSize(self.ships);
-    self.radius = Math.min(32, 12 + self.ships * 0.1);
     self.radius = 22 + self.size * 5;
   };
   self.clone = function() {
@@ -432,6 +431,7 @@ var GameReplay = function() {
       var currentInfo = new TurnInfo(self);
       self.turns.push(currentInfo);
       json.events.forEach(function(event) {
+        event.turn++;
         while (currentInfo.number < event.turn) {
           self.maxShips = Math.max(self.maxShips, currentInfo.updateTurnState());
           currentInfo = currentInfo.next();
