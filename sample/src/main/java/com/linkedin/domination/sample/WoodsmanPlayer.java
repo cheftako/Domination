@@ -185,7 +185,7 @@ public class WoodsmanPlayer implements Player {
         switch (s.getCurrentSize()) {
           case SMALL: growth = 1; break;
           case MEDIUM: growth = 2; break;
-          case LARGE: growth = 3; break; // 4?
+          case LARGE: growth = 4; break;
         }
         universeState.put(i, new Stats(s, s.getEstSize() + growth, null, null, null));
       }
@@ -247,7 +247,6 @@ public class WoodsmanPlayer implements Player {
 
         }
         } catch (NullPointerException ex) {
-          System.out.println("Null pointer what?");
         }
       } else {
         // Landing event
@@ -667,7 +666,7 @@ public class WoodsmanPlayer implements Player {
       switch (current) {
         case SMALL: growth += 1; break;
         case MEDIUM: growth += 2; break;
-        case LARGE: growth += 3; break;
+        case LARGE: growth += 4; break;
         default: growth += 1;
       }
     }
