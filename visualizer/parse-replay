@@ -67,7 +67,7 @@ def main():
       ev1 = EVENT_INFO1.search(line)
       ev2 = EVENT_INFO2.search(line)
       if planet_info:
-        if players:
+        if events:
           continue
         planets.append({
          'id': int(planet_info.group(1)),

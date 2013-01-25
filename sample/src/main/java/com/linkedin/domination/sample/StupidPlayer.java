@@ -2,10 +2,7 @@ package com.linkedin.domination.sample;
 
 import com.linkedin.domination.api.*;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.Random;
+import java.util.*;
 
 /**
  * This is a dumb AI.
@@ -13,23 +10,25 @@ import java.util.Random;
 public class StupidPlayer implements Player
 {
     private int me;
-    private Random random;
 
     public StupidPlayer() {
         me = 0;
-        random = new Random();
+    }
+
+    @Override
+    public String getPlayerName() {
+        return "Scarecrow";
     }
 
     @Override
     public void initialize(Integer playerNbr) {
         me = playerNbr;
-        System.out.println("Stupid player is player " + me);
     }
 
     @Override
     public List<Move> makeMove(Universe universe, List<Event> events) {
         List<Planet> myPlanets = getMyPlanets(universe);
-        List<Planet> targets = getTargetPlanets(universe);
+        List<Planet> targets = getTargetPlanetsForPerson(universe, largestEnemy(universe));
 
         List<Move> myMoves = new ArrayList<Move>(myPlanets.size());
         for(Planet planet : myPlanets) {
@@ -61,17 +60,42 @@ public class StupidPlayer implements Player
         return closest;
     }
 
-    private List<Planet> getTargetPlanets(Universe universe)
+    private List<Planet> getTargetPlanetsForPerson(Universe universe, int target)
     {
         List<Planet> targetPlanets = new ArrayList<Planet>();
         for(Planet planet : universe.getPlanets())
         {
-            if (planet.getOwner() != me)
+            if (planet.getOwner() == target)
             {
                 targetPlanets.add(planet);
             }
         }
         return targetPlanets;
+    }
+
+    private int largestEnemy(Universe universe)
+    {
+        Map<Integer, Integer> counts = new HashMap<Integer, Integer>();
+        for(Planet planet : universe.getPlanets())
+        {
+            int owner = planet.getOwner();
+            if (owner != me)
+            {
+                int currentCount = counts.containsKey(owner) ? counts.get(owner) : 0;
+                counts.put(owner, currentCount + 1);
+            }
+        }
+        int max = Integer.MIN_VALUE;
+        int biggestOwner = 0;
+        for(int key : counts.keySet())
+        {
+            if (counts.get(key) > max)
+            {
+                max = counts.get(key);
+                biggestOwner = key;
+            }
+        }
+        return biggestOwner;
     }
 
     private List<Planet> getMyPlanets(Universe universe) {

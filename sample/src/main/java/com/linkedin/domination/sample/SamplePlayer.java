@@ -28,6 +28,11 @@ public class SamplePlayer implements Player
     }
 
     @Override
+    public String getPlayerName() {
+        return "Cowardly Lion";
+    }
+
+    @Override
     public void initialize(Integer playerNbr)
     {
         _me = playerNbr;
@@ -45,10 +50,6 @@ public class SamplePlayer implements Player
         {
             Integer targetId = event.getToPlanet();
             Planet target = planetMap.get(targetId);
-            if (planetHasOrders(result, targetId))
-            {
-                continue;
-            }
             if (event.getEventType() == com.linkedin.domination.api.Event.EventType.LANDING)
             {
                 // This client isn't bright enough to worry about this.
@@ -59,12 +60,16 @@ public class SamplePlayer implements Player
                     {
                         _targets.remove(targetId);
                     }
+                    if (planetHasOrders(result, targetId))
+                    {
+                        continue;
+                    }
                     if (target.getOwner() == _me)
                     {
                         // Recent conquest so check its safe and clear any state
                         if (_flee.contains(targetId))
                         {
-                            Integer newHome = getTarget(universe, target, result);
+                            Integer newHome = getTarget(universe, target, result, Move.FleetType.HORDE, true);
                             _flee.remove(targetId);
                             if (newHome != null)
                             {
@@ -75,6 +80,10 @@ public class SamplePlayer implements Player
                         }
                     }
                 }
+                continue;
+            }
+            if (planetHasOrders(result, targetId))
+            {
                 continue;
             }
             if (event.getFleetOwner() == _me)
@@ -90,7 +99,7 @@ public class SamplePlayer implements Player
             }
             if (target.getOwner() == _me && isFleetLarger(event.getFleetSize(), target.getSize()))
             {
-                Integer newHome = getTarget(universe, target, result);
+                Integer newHome = getTarget(universe, target, result, Move.FleetType.HORDE, true);
                 if (newHome != null)
                 {
                     Move flee = new Move(targetId, newHome, Move.FleetType.HORDE);
@@ -115,7 +124,7 @@ public class SamplePlayer implements Player
                 (turn < MID_LAUNCH_TURN && source.getPopulation() >= MID_MIN_LAUNCH_SIZE) ||
                 (source.getPopulation() >= LATE_MIN_LAUNCH_SIZE))
             {
-                Integer target = getTarget(universe, source, result);
+                Integer target = getTarget(universe, source, result, Move.FleetType.RAIDING, true);
                 if (target != null)
                 {
                     Move attack = new Move(source.getId(), target, Move.FleetType.RAIDING);
@@ -129,7 +138,7 @@ public class SamplePlayer implements Player
         return result;
     }
 
-    private Integer getTarget(Universe universe, Planet source, List<Move> orders)
+    private Integer getTarget(Universe universe, Planet source, List<Move> orders, Move.FleetType size, boolean respectOrders)
     {
         Integer current = null;
         Integer distance = Integer.MAX_VALUE;
@@ -144,13 +153,29 @@ public class SamplePlayer implements Player
             {
                 continue;
             }
-            if (planetHasOrders(orders, option.getId()))
+            if (respectOrders && planetHasOrders(orders, option.getId()))
             {
                 continue;
             }
             // We have found a viable target, now lets find the closest.
             Integer optionDistance = universe.getTimeToTravel(source, option);
-            if (isFleetLarger(option.getSize(), source.getSize()))
+            Size fleetSize = source.getSize();
+            if (size == Move.FleetType.RAIDING)
+            {
+                if (source.getPopulation() >= 100)
+                {
+                    fleetSize = Size.LARGE;
+                }
+                else if (source.getPopulation() >= 40)
+                {
+                    fleetSize = Size.MEDIUM;
+                }
+                else
+                {
+                    fleetSize = Size.SMALL;
+                }
+            }
+            if (isFleetLarger(option.getSize(), fleetSize))
             {
                 continue;
             }
@@ -158,6 +183,33 @@ public class SamplePlayer implements Player
             {
                 current = option.getId();
                 distance = optionDistance;
+            }
+        }
+        if (respectOrders && current == null)
+        {
+            _targets.clear();
+            current = getTarget(universe, source, orders, size, false);
+        }
+        if (current == null)
+        {
+            // Time to play the cowardly lion.
+            for (Planet option : planets)
+            {
+                if (option.getOwner() != _me)
+                {
+                    continue;
+                }
+                if (source == option)
+                {
+                    continue;
+                }
+                // We have found a viable target, now lets find the closest.
+                Integer optionDistance = universe.getTimeToTravel(source, option);
+                if (optionDistance < distance)
+                {
+                    current = option.getId();
+                    distance = optionDistance;
+                }
             }
         }
         return current;

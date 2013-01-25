@@ -94,6 +94,11 @@ public class WoodsmanPlayer implements Player {
   }
 
   @Override
+  public String getPlayerName() {
+      return "Woodsman";
+  }
+
+  @Override
   public List<Move> makeMove(Universe universe, List<Event> events) {
     if (turn == 0) {
       initializeState(universe);

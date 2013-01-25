@@ -63,4 +63,21 @@ public class LaunchEvent implements Event {
     public int getFlightDuration() {
         return this._flightDuration;
     }
+
+    public String toJson() {
+        String json = "{";
+        json += "\"destination\": ";
+        json += _destination;
+        json += ", \"duration\": ";
+        json += _flightDuration;
+        json += ", \"origin\": ";
+        json += _origin;
+        json += ", \"player\": ";
+        json += _owner;
+        json += ", \"ships\": ";
+        json += _sentShipCount;
+        json += ", \"turn\": {turn}},";
+
+        return json;
+    }
 }

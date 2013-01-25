@@ -44,4 +44,16 @@ public class Planet
     public Size getSize() {
         return size;
     }
+
+    public String toJson() {
+        String json = "{";
+        json += "\"planet\": ";
+        json += id;
+        json += ", \"player\": ";
+        json += owner;
+        json += ", \"ships\": ";
+        json += population;
+        json += ", \"turn\": {turn}},";
+        return json;
+    }
 }

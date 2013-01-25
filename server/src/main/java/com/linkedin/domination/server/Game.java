@@ -32,13 +32,53 @@ public class Game {
         }
     }
 
+    private void printPlayers()
+    {
+        System.out.println(quote("players") + ": [");
+        for (Integer playerId : _players.keySet())
+        {
+            System.out.println("  {\"id\": " + playerId + ", \"name\": " + quote(_players.get(playerId).getPlayerName()) + "},");
+        }
+        System.out.println("],");
+    }
+
+    private String quote(String item)
+    {
+        return "\"" + item + "\"";
+    }
+
+    private String braces(String item)
+    {
+        return "{" + item +  "}";
+    }
+
+    private void printPlanets()
+    {
+        System.out.println(quote("planets") + ": [");
+        for(Planet planet : _universe.getPlanets())
+        {
+            System.out.println(braces(quote("id") + ": " + planet.getId() + ", " + quote("owner") +
+                ": " + planet.getOwner() + ", " +
+                quote("ships") + ": " + planet.getPopulation() + ", " +
+                quote("x") + ": " + planet.getX() + ", " +
+                quote("y") + ": " + planet.getY()
+            ) + ",");
+        }
+        System.out.println("],");
+    }
+
     public Universe start()
     {
         List<Event> lastTurnEvents = new ArrayList<Event>();
 
+        System.out.println("{");
+        printPlayers();
+        printPlanets();
+        System.out.println(quote("events") + ": [");
+
         while(!isOver())
         {
-            System.out.print(".");
+            //System.out.print(".");
             List<Event> thisTurnEvents = new ArrayList<Event>();
             Map<Planet, List<Fleet>> conflictMap = new HashMap<Planet, List<Fleet>>();
 
@@ -51,7 +91,7 @@ public class Game {
                 List<Fleet> playerFleets = getFleetsForPlayer(player, playerMoves);
                 _currentFleets.addAll(playerFleets);
                 List<Event> playerEvents = getEventsForFleets(playerFleets);
-                printLaunchEvents(playerEvents);
+                //printLaunchEvents(playerEvents);
                 thisTurnEvents.addAll(playerEvents);
             }
 
@@ -68,6 +108,7 @@ public class Game {
                         Planet friendlyPlanet = _universe.getPlanetMap().get(fleet.get_destination());
                         Planet updated = makePlanetWithNewOwnerAndSize(friendlyPlanet, fleet.getOwner(), friendlyPlanet.getPopulation() + fleet.getSize());
                         updatePlanet(updated);
+                        System.out.println(updated.toJson().replace("{turn}", _turnNumber + ""));
                     } else {
                         // combat setup
                         Planet conflictPlanet = _universe.getPlanetMap().get(fleet.get_destination());
@@ -82,7 +123,7 @@ public class Game {
             _currentFleets.removeAll(removeFleets);
 
             List<Event> combatEvents = combat(conflictMap);
-            printCombatEvents(combatEvents);
+            //printCombatEvents(combatEvents);
             thisTurnEvents.addAll(combatEvents);
 
             // Growth
@@ -91,8 +132,9 @@ public class Game {
             lastTurnEvents = thisTurnEvents;
             _turnNumber++;
         }
+        System.out.println("]}");
 
-        System.out.println("Game lasted " + _turnNumber + " turns");
+        //System.out.println("Game lasted " + _turnNumber + " turns");
         return _universe;
     }
 
@@ -291,6 +333,7 @@ public class Game {
                 // Neutral just got a planet
                 Planet everyoneLost = makePlanetWithNewOwnerAndSize(battleGround, 0, 0);
                 updatePlanet(everyoneLost);
+                System.out.println(everyoneLost.toJson().replace("{turn}", _turnNumber + ""));
             } else {
                 // new owner
                 Fleet winner = fleetsInvolved.iterator().next();
@@ -303,9 +346,11 @@ public class Game {
                 {
                     Planet winningPlanet = makePlanetWithNewOwnerAndSize(battleGround, winner.getOwner(), winnerSize);
                     updatePlanet(winningPlanet);
+                    System.out.println(winningPlanet.toJson().replace("{turn}", _turnNumber + ""));
                 } else {
                     Planet everyoneStillLost = makePlanetWithNewOwnerAndSize(battleGround, 0, 0);
                     updatePlanet(everyoneStillLost);
+                    System.out.println(everyoneStillLost.toJson().replace("{turn}", _turnNumber + ""));
                 }
             }
 
@@ -332,6 +377,11 @@ public class Game {
 
     private Planet makePlanetWithNewOwnerAndSize(Planet planet, int owner, int size)
     {
+        if(size == 0)
+        {
+            // become neutral if no one is on it.
+            owner = 0;
+        }
         Planet terra = new Planet(planet.getX(),
                 planet.getY(),
                 planet.getId(),
@@ -361,6 +411,8 @@ public class Game {
                     fleet.getSize(),
                     fleet.getTurnsRemaining());
             launchEvents.add(event);
+            String launchJson = event.toJson();
+            System.out.println(launchJson.replace("{turn}", _turnNumber + ""));
         }
         return launchEvents;
     }
@@ -371,6 +423,7 @@ public class Game {
 
         for(Move move : moves)
         {
+            // TODO: Should remove moves that involve duplicate origin planets
             if(moveValidForPlayer(player, move))
             {
                 int fleetSize = getFleetSize(move);

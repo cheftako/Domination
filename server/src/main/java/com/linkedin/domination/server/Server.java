@@ -192,7 +192,7 @@ public class Server
 
     public static void main(String[] args)
     {
-        System.out.println("Starting the game server");
+        //System.out.println("Starting the game server");
         if (!checkUsage(args))
         {
             printUsage();
@@ -202,15 +202,15 @@ public class Server
 
         UniverseGenerator generator = new UniverseGenerator(60, 1000, 800, 40);
         Universe universe = generator.createUniverse();
-        System.out.println(universe.toString());
+        //System.out.println(universe.toString());
 
         Player playerOne = getPlayerOne(args);
         Player playerTwo = getPlayerTwo(args);
         Player playerThree = getPlayerThree(args);
 
-        System.out.println(playerOne.toString());
-        System.out.println(playerTwo.toString());
-        System.out.println(playerThree.toString());
+        //System.out.println(playerOne.toString());
+        //System.out.println(playerTwo.toString());
+        //System.out.println(playerThree.toString());
 
         int numberTurns = getNumberTurns(args);
 
@@ -221,7 +221,7 @@ public class Server
         Game game = new Game(universe, playerMap, numberTurns);
         universe = game.start();
 
-        System.out.println(universe);
+        //System.out.println(universe);
     }
 
 }
