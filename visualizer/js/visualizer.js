@@ -154,10 +154,24 @@ var ScoreBoardSprite = function(rect, callback) {
     self.shipPlot(self.rect.height / currentGameReplay.maxShips);
     self.renderTitle("Ships");
   };
+  self.planetStackedArea = function() {
+    var prevx = 0;
+    currentGameReplay.turns.forEach(function(turn) {
+      var y = 0;
+      turn.players.forEach(function(player) {
+        var h = self.rect.height * player.planets / turn.planets.length;
+        var area = new gamejs.Rect(prevx, y, self.dx, h);
+        gamejs.draw.rect(self.buffer, playerColors[player.id], area, 0);
+        y += h;
+      });
+      prevx += self.dx;
+    });
+    gamejs.draw.rect(self.buffer, '#000', self.bufferRect, 1);
+    self.renderTitle("% planets");
+  };
   self.shipStackedArea = function() {
     var prevx = 0;
     currentGameReplay.turns.forEach(function(turn) {
-      var pships = [0];
       var y = 0;
       turn.players.forEach(function(player) {
         var h = self.rect.height * player.ships / turn.ships;
@@ -171,7 +185,8 @@ var ScoreBoardSprite = function(rect, callback) {
     self.renderTitle("% ships");
   };
   self.switchRenderers = function() {
-    if (self.renderer == self.shipStackedArea) self.renderer = self.rawShipPlot;
+    if (self.renderer == self.shipStackedArea) self.renderer = self.planetStackedArea;
+    else if (self.renderer == self.planetStackedArea) self.renderer = self.rawShipPlot;
     else if (self.renderer == self.rawShipPlot) self.renderer = self.zoomedShipPlot;
     else self.renderer = self.shipStackedArea;
     self.buffer.fill('#eee');
