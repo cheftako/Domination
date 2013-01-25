@@ -15,7 +15,7 @@ var fleetUniqueIdCounter = 0;
 var numberOfAlertsShown = 0;
 
 // Settings
-gamejs.preload(["restart.png", "start.png", "pause.png", "skip-backward.png", "skip-forward.png"]);
+gamejs.preload(["restart.png", "start.png", "pause.png", "skip-backward.png", "skip-forward.png", "switch.png"]);
 var canvasWidth = 1000;
 var canvasHeight = 800;
 var maxPlanetRadius = 30;
@@ -104,8 +104,8 @@ var ScoreBoardSprite = function(rect, callback) {
   ScoreBoardSprite.superConstructor.apply(self, arguments);
   self.rect = new gamejs.Rect(rect);
   self.dx = 0;
-  self.dy = 0;
   self.buffer = new gamejs.Surface(self.rect.width, self.rect.height);
+  self.bufferRect = gamejs.Rect(0, 0, self.rect.width, self.rect.height);
   self.lastTurnRendered = null;
   self.mousePressed = false;
   self.hovered = false;
@@ -126,27 +126,66 @@ var ScoreBoardSprite = function(rect, callback) {
       self.mousePressed = false;
     }
   };
-  self.update = function(msDuration) {
-    if (!currentGameReplay || self.lastTurnRendered == currentGameReplay.turns[0]) return;
-    self.lastTurnRendered = currentGameReplay.turns[0];
-    self.buffer.fill('#eee');
-    if (!currentGameReplay) return;
+  self.renderTitle = function(name) {
+    drawCenteredText(self.buffer, self.bufferRect, playerNameFont, 'rgba(150, 150, 150, 0.5)', name);
+  };
+  self.shipPlot = function(dy) {
     currentGameReplay.players.forEach(function(player) {
       var lastX = 0;
       var lastY = self.rect.height;
-      self.dx = self.rect.width / currentGameReplay.totalTurns;
       // Small trick to enlarge ships graph around loosing player's max ships, as otherwise they get dwarfed by winner
-      self.dy = self.rect.height / currentGameReplay.loosingPlayersMaxShips / 1.4;
       var color = player.color;
       for (var i = 0; i < currentGameReplay.totalTurns; i++) {
         var p = currentGameReplay.turns[i].players.get(player.id);
         var newX = i * self.dx;
-        var newY = Math.max(0, self.rect.height - p.ships * self.dy);
+        var newY = Math.max(0, self.rect.height - p.ships * dy);
         gamejs.draw.line(self.buffer, color, [lastX, lastY], [newX, newY], 2);
         lastX = newX;
         lastY = newY;
       }
     });
+    gamejs.draw.rect(self.buffer, '#000', self.bufferRect, 1);
+  };
+  self.zoomedShipPlot = function() {
+    self.shipPlot(self.rect.height / currentGameReplay.loosingPlayersMaxShips / 1.4);
+    self.renderTitle("Ships (zoomed in)");
+  };
+  self.rawShipPlot = function() {
+    self.shipPlot(self.rect.height / currentGameReplay.maxShips);
+    self.renderTitle("Ships");
+  };
+  self.shipStackedArea = function() {
+    var prevx = 0;
+    currentGameReplay.turns.forEach(function(turn) {
+      var pships = [0];
+      var y = 0;
+      turn.players.forEach(function(player) {
+        var h = self.rect.height * player.ships / turn.ships;
+        var area = new gamejs.Rect(prevx, y, self.dx, h);
+        gamejs.draw.rect(self.buffer, playerColors[player.id], area, 0);
+        y += h;
+      });
+      prevx += self.dx;
+    });
+    gamejs.draw.rect(self.buffer, '#000', self.bufferRect, 1);
+    self.renderTitle("% ships");
+  };
+  self.switchRenderers = function() {
+    if (self.renderer == self.shipStackedArea) self.renderer = self.rawShipPlot;
+    else if (self.renderer == self.rawShipPlot) self.renderer = self.zoomedShipPlot;
+    else self.renderer = self.shipStackedArea;
+    self.buffer.fill('#eee');
+    if (!currentGameReplay) return;
+    self.renderer();
+  };
+  self.renderer = self.shipStackedArea;
+  self.update = function(msDuration) {
+    if (!currentGameReplay || self.lastTurnRendered == currentGameReplay.turns[0]) return;
+    self.lastTurnRendered = currentGameReplay.turns[0];
+    self.buffer.fill('#eee');
+    if (!currentGameReplay) return;
+    self.dx = self.rect.width / currentGameReplay.totalTurns;
+    self.renderer();
   };
   self.draw = function(surface) {
     surface.blit(self.buffer, self.rect);
@@ -313,6 +352,7 @@ var TurnInfo = function(other) {
   self.planets = new HashTable();   // Planet states in this turn
   self.players = new HashTable();   // Player states in this turn
   self.fleets = new HashTable();    // Fleet up in the air during this turn, hashed by a "unique id across fleets across all turns"
+  self.ships = 0;                   // Total number of ships in this turn
   if (other) {
     other.planets.forEach(function(planet) { self.planets.set(planet.id, planet.clone()); });
     other.players.forEach(function(player) { self.players.set(player.id, player.clone()); });
@@ -378,10 +418,12 @@ var TurnInfo = function(other) {
       planet.updatePlanet();
     });
     var maxShips = 0;
+    self.ships = 0;
     self.players.forEach(function(player) {
       player.turn = self.number;
       player.aggregateShips(self.planets, self.fleets);
       maxShips = Math.max(maxShips, player.ships);
+      self.ships += player.ships;
     });
     return maxShips;
   };
@@ -543,29 +585,37 @@ var GameScene = function() {
     self.views.add(button);
     return button;
   };
+  self.switchStats = function() {
+    self.scoreBoard.switchRenderers();
+  };
   // Layout
-  self.addButton([0, 0, 34, 34], "restart.png", "Restart game from beginning", self.restart);
-  self.playButton = self.addButton([35, 0, 36, 34], "start.png" ,"Play/pause game", self.togglePlay);
-  self.addButton([0, 35, 34, 34], "skip-backward.png", "Step one turn back", self.stepBackward);
-  self.addButton([35, 35, 34, 34], "skip-forward.png", "Step one turn forward", self.stepForward);
-  var scoreBoardStartX = 72;
-  var scoreBoardStartY = 0;
-  var scoreBoardHeight = 32;
-  var turnCounterSpriteWidth = 130;
-  var pheight = 32;
-  self.turnCounterSprite = new TurnCounterSprite([canvasWidth - turnCounterSpriteWidth, scoreBoardStartY, turnCounterSpriteWidth, pheight]);
+  var buttonSize = 32;
+  self.addButton([0, 0, buttonSize, buttonSize], "restart.png", "Restart game from beginning", self.restart);
+  self.playButton = self.addButton([buttonSize, 0, buttonSize, buttonSize], "start.png" ,"Play/pause game", self.togglePlay);
+  self.addButton([0, buttonSize + 8, buttonSize, buttonSize], "skip-backward.png", "Step one turn back", self.stepBackward);
+  self.addButton([buttonSize, buttonSize + 8, buttonSize, buttonSize], "skip-forward.png", "Step one turn forward", self.stepForward);
+  self.turnCounterSprite = new TurnCounterSprite([canvasWidth - buttonSize * 4, 0, buttonSize * 4, buttonSize]);
   self.views.add(self.turnCounterSprite);
-  self.scoreBoard = new ScoreBoardSprite([scoreBoardStartX, scoreBoardStartY + pheight, canvasWidth - scoreBoardStartX, scoreBoardStartY + 40], self.jumpToTurn);
-  var pwidth = (canvasWidth - scoreBoardStartX - turnCounterSpriteWidth) / 3;
-  self.views.add(self.scoreBoard);
-  var x = scoreBoardStartX;
+  var x = self.playButton.rect.right + 2;
+  var pwidth = (self.turnCounterSprite.rect.left - x) / 3;
   for (var player_id in playerColors) {
     if (player_id > 0) {
-      self.views.add(new PlayerSprite(player_id, [x, 0, pwidth, pheight]));
+      self.views.add(new PlayerSprite(player_id, [x, 0, pwidth, buttonSize]));
       x += pwidth;
     }
   }
-  self.universe = new UniverseSprite([0, scoreBoardStartX, canvasWidth, canvasHeight - scoreBoardStartX]);
+  self.switchButton = self.addButton([canvasWidth - 16, buttonSize + 2, 16, 40], "switch.png", "Switch stats", self.switchStats);
+  self.scoreBoard = new ScoreBoardSprite(
+    [
+      self.playButton.rect.right + 2,
+      self.switchButton.rect.top,
+      self.switchButton.rect.left - self.playButton.rect.right,
+      self.switchButton.rect.height
+    ],
+    self.jumpToTurn
+  );
+  self.views.add(self.scoreBoard);
+  self.universe = new UniverseSprite([0, self.scoreBoard.rect.bottom, canvasWidth, canvasHeight - self.scoreBoard.rect.bottom]);
   self.views.add(self.universe);
   // Events
   self.handleEvent = function(event) {
@@ -672,7 +722,7 @@ function Director (fps) {
           self.cumulatedTickDuration = 0;
           self.tickCount = 0;
         }
-        if (self.tickDuration) drawCenteredText(mainSurface, -2, -2, self.tickFont, "#bb0000", self.tickDuration);
+        if (self.tickDuration) drawTextAt(mainSurface, -2, -2, self.tickFont, "#bb0000", self.tickDuration);
       }
     }
   }
@@ -821,14 +871,14 @@ function centeredPosition(r1, r2) {
 
 function drawTextAt(surface, x, y, font, color, text) {
   var textRender = font.render(text, color);
-  surface.blit(textRender, [x, y]);
-}
-
-function drawCenteredText(surface, x, y, font, color, text) {
-  var textRender = font.render(text, color);
   if (x < 0) x = surface.getSize()[0] - textRender.getSize()[0] + x;
   if (y < 0) y = surface.getSize()[1] - textRender.getSize()[1] + y;
   surface.blit(textRender, [x, y]);
+}
+
+function drawCenteredText(surface, rect, font, color, text) {
+  var textRender = font.render(text, color);
+  surface.blit(textRender, centeredPosition(rect, textRender.getSize()));
 }
 
 /*
