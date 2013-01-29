@@ -14,67 +14,38 @@ public class Game {
     private final List<Fleet> _currentFleets;
     private final Map<Integer, Player> _players;
     private final Map<Player, Integer> _playerIds;
+    private final List<Watcher> _watchers;
     private final int _maxTurns;
     private int _turnNumber;
 
-    public Game(Universe _universe, Map<Integer, Player> players, int maxTurns) {
-        this._universe = _universe;
-        this._currentFleets = new LinkedList<Fleet>();
-        this._players = players;
-        this._maxTurns = maxTurns;
-        this._turnNumber = 0;
+    public Game(Universe universe, Map<Integer, Player> players, int maxTurns, List<Watcher> watchers) {
+        _universe = universe;
+        _currentFleets = new LinkedList<Fleet>();
+        _players = players;
+        _maxTurns = maxTurns;
+        _watchers = watchers;
+        _turnNumber = 0;
+
+        for (Watcher watcher : _watchers)
+        {
+            watcher.setUniverse(_universe);
+        }
 
         this._playerIds = new HashMap<Player, Integer>(_players.size());
         for (Integer playerId : players.keySet())
         {
             Player player = players.get(playerId);
             _playerIds.put(player, playerId);
+            for (Watcher watcher : _watchers)
+            {
+                watcher.setPlayer(playerId, player);
+            }
         }
-    }
-
-    private void printPlayers()
-    {
-        System.out.println(quote("players") + ": [");
-        for (Integer playerId : _players.keySet())
-        {
-            System.out.println("  {\"id\": " + playerId + ", \"name\": " + quote(_players.get(playerId).getPlayerName()) + "},");
-        }
-        System.out.println("],");
-    }
-
-    private String quote(String item)
-    {
-        return "\"" + item + "\"";
-    }
-
-    private String braces(String item)
-    {
-        return "{" + item +  "}";
-    }
-
-    private void printPlanets()
-    {
-        System.out.println(quote("planets") + ": [");
-        for(Planet planet : _universe.getPlanets())
-        {
-            System.out.println(braces(quote("id") + ": " + planet.getId() + ", " + quote("owner") +
-                ": " + planet.getOwner() + ", " +
-                quote("ships") + ": " + planet.getPopulation() + ", " +
-                quote("x") + ": " + planet.getX() + ", " +
-                quote("y") + ": " + planet.getY()
-            ) + ",");
-        }
-        System.out.println("],");
     }
 
     public Universe start()
     {
         List<Event> lastTurnEvents = new ArrayList<Event>();
-
-        System.out.println("{");
-        printPlayers();
-        printPlanets();
-        System.out.println(quote("events") + ": [");
 
         while(!isOver())
         {
@@ -108,7 +79,18 @@ public class Game {
                         Planet friendlyPlanet = _universe.getPlanetMap().get(fleet.get_destination());
                         Planet updated = makePlanetWithNewOwnerAndSize(friendlyPlanet, fleet.getOwner(), friendlyPlanet.getPopulation() + fleet.getSize());
                         updatePlanet(updated);
-                        System.out.println(updated.toJson().replace("{turn}", _turnNumber + ""));
+                        List<Integer> playersInvolved = new ArrayList<Integer>(1);
+                        playersInvolved.add(fleet.getOwner());
+                        Event reinforce = new LandingEvent(fleet.get_origin(),
+                            fleet.get_destination(),
+                            Size.getSizeForNumber(fleet.getSize()),
+                            fleet.getSize(),
+                            friendlyPlanet.getPopulation() + fleet.getSize(),
+                            playersInvolved,
+                            fleet.getOwner()
+                        );
+                        notifyOfEvent(reinforce);
+                        // System.out.println(updated.toJson().replace("{turn}", _turnNumber + ""));
                     } else {
                         // combat setup
                         Planet conflictPlanet = _universe.getPlanetMap().get(fleet.get_destination());
@@ -132,9 +114,12 @@ public class Game {
             lastTurnEvents = thisTurnEvents;
             _turnNumber++;
         }
-        System.out.println("]}");
 
         //System.out.println("Game lasted " + _turnNumber + " turns");
+        for (Watcher watcher : _watchers)
+        {
+            watcher.gameOver();
+        }
         return _universe;
     }
 
@@ -252,6 +237,19 @@ public class Game {
         }
         return fleetList;
     }
+
+    /**
+     * Set the event on any watchers which are present
+     * @param event
+     */
+    private void notifyOfEvent(Event event)
+    {
+        for (Watcher watcher : _watchers)
+        {
+            watcher.setEvent(event, _turnNumber);
+        }
+    }
+
     /**
      * Breaking stuff!!
      * @param conflictMap
@@ -289,6 +287,7 @@ public class Game {
                         playersInvolved,
                         fleet.getOwner()
                         );
+                notifyOfEvent(landing);
                 battleEvents.put(fleet.getOwner(), landing);
             }
 
@@ -333,7 +332,7 @@ public class Game {
                 // Neutral just got a planet
                 Planet everyoneLost = makePlanetWithNewOwnerAndSize(battleGround, 0, 0);
                 updatePlanet(everyoneLost);
-                System.out.println(everyoneLost.toJson().replace("{turn}", _turnNumber + ""));
+                // System.out.println(everyoneLost.toJson().replace("{turn}", _turnNumber + ""));
             } else {
                 // new owner
                 Fleet winner = fleetsInvolved.iterator().next();
@@ -346,11 +345,11 @@ public class Game {
                 {
                     Planet winningPlanet = makePlanetWithNewOwnerAndSize(battleGround, winner.getOwner(), winnerSize);
                     updatePlanet(winningPlanet);
-                    System.out.println(winningPlanet.toJson().replace("{turn}", _turnNumber + ""));
+                    // System.out.println(winningPlanet.toJson().replace("{turn}", _turnNumber + ""));
                 } else {
                     Planet everyoneStillLost = makePlanetWithNewOwnerAndSize(battleGround, 0, 0);
                     updatePlanet(everyoneStillLost);
-                    System.out.println(everyoneStillLost.toJson().replace("{turn}", _turnNumber + ""));
+                    // System.out.println(everyoneStillLost.toJson().replace("{turn}", _turnNumber + ""));
                 }
             }
 
@@ -410,9 +409,10 @@ public class Game {
                     fleet.getOwner(),
                     fleet.getSize(),
                     fleet.getTurnsRemaining());
+            notifyOfEvent(event);
             launchEvents.add(event);
             String launchJson = event.toJson();
-            System.out.println(launchJson.replace("{turn}", _turnNumber + ""));
+            //System.out.println(launchJson.replace("{turn}", _turnNumber + ""));
         }
         return launchEvents;
     }

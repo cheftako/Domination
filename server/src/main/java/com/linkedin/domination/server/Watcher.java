@@ -2,6 +2,7 @@ package com.linkedin.domination.server;
 
 import com.linkedin.domination.api.Event;
 import com.linkedin.domination.api.Move;
+import com.linkedin.domination.api.Player;
 import com.linkedin.domination.api.Universe;
 
 import java.util.List;
@@ -18,5 +19,9 @@ public interface Watcher
 {
     void setUniverse(Universe universe);
 
-    void turn(Map<Integer, List<Move>> moves, List<Event> events);
+    void setEvent(Event event, int turn);
+
+    void setPlayer(int playerNbr, Player player);
+
+    void gameOver();
 }
