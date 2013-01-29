@@ -36,10 +36,12 @@ public class WoodsmanPlayer implements Player {
   private static final int FORTRESS_MIN_SIZE = MEDIUM_SIZE;
 
   private static final int MARGIN = 5;
-  private static final int MAX_DISTANCE = 40;
-  private static final int PROD_TARGET_MAX_DISTANCE = 20;
+  private static final int MAX_DISTANCE = 30;
+  private static final int PROD_TARGET_MAX_DISTANCE = 15;
   private static final int BOUNDARY_BONUS = 5;
   private static final int TARGET_BONUS = 3;
+  private static final int INFLIGHT_PENALTY = 10;
+  private static final int SMASH_BONUS = 10;
 
   private static final Map<Size, List<Integer>> sizeRanges;
   private static final int MIN = 0;
@@ -532,7 +534,7 @@ public class WoodsmanPlayer implements Player {
     }
     int allowableFleetSize = (int)(source.getPopulation() * fleetSizes.get(fleetSize));
     int currentTarget = -1;
-    double bestScore = -30;
+    double bestScore = -60;
     for (Planet p : universe.getPlanets()) { // production worlds consider all planets
         double score = generateProductionTargetScore(source, p, allowableFleetSize);
         if (score > bestScore) {
@@ -594,7 +596,7 @@ public class WoodsmanPlayer implements Player {
 
     double score = 0;
     int time = Universe.getTimeToTravel(source, dest);
-    score -= time;
+    score -= (time * time);
 
     Stats target = universeState.get(dest.getId());
     int pop = target.getEstSize();
@@ -608,9 +610,9 @@ public class WoodsmanPlayer implements Player {
     if (boundary) score += BOUNDARY_BONUS;
 
     Integer attacked = recentAttacks.get(dest.getId());
-    if (attacked != null) score -= attacked;
+    if (attacked != null && !smashTargets.containsKey(dest.getId())) score -= INFLIGHT_PENALTY;
 
-    if (smashTargets.containsKey(dest.getId()) && target.getOwner() != 0) score += 3;
+    if (smashTargets.containsKey(dest.getId()) && target.getOwner() != 0) score += SMASH_BONUS;
 
     if (target.getOwner() == myTarget) score += TARGET_BONUS;
 
