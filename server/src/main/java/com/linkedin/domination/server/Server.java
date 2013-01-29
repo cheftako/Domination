@@ -3,7 +3,9 @@ package com.linkedin.domination.server;
 import com.linkedin.domination.api.Universe;
 import com.linkedin.domination.api.Player;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -218,7 +220,9 @@ public class Server
         playerMap.put(1, playerOne);
         playerMap.put(2, playerTwo);
         playerMap.put(3, playerThree);
-        Game game = new Game(universe, playerMap, numberTurns);
+        List<Watcher> watchers = new ArrayList<Watcher>();
+        watchers.add(new JsonWatcher());
+        Game game = new Game(universe, playerMap, numberTurns, watchers);
         universe = game.start();
 
         //System.out.println(universe);
