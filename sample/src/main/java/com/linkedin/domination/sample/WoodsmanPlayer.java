@@ -433,7 +433,7 @@ public class WoodsmanPlayer implements Player {
     Planet source = planets.get(planetID);
 
     // if we are big, become a fortress
-    if (source.getPopulation() > sizeRanges.get(Size.MEDIUM).get(AVG)) {
+    if (source.getPopulation() > sizeRanges.get(Size.LARGE).get(MIN)) {
       myPlanets.put(planetID, Role.FORTRESS);
       return generateFortressTarget(planetID, universe);
     }
@@ -499,14 +499,18 @@ public class WoodsmanPlayer implements Player {
     // Find a target
     int currentTarget = -1;
     double bestScore = -30;
+    double bestRealScore = Double.NEGATIVE_INFINITY;
+    int potential = 0;
     for (Planet p : universe.getPlanets()) {
       if (Universe.getTimeToTravel(source, p) <= MAX_DISTANCE &&
               p.getOwner() != me) {
         double score = generateFortressTargetScore(source, p, allowableFleetSize, neutralsOnly);
+        potential += 1;
         if (score > bestScore) {
           bestScore = score;
           currentTarget = p.getId();
         }
+        bestRealScore = Math.max(score, bestRealScore);
       }
     }
     if (currentTarget != -1) {
@@ -571,6 +575,7 @@ public class WoodsmanPlayer implements Player {
     if (dest.getOwner() == 0) {
       score += fleetSize - pop;
     }
+    if (dest.getSize().equals(Size.SMALL)) score += SMASH_BONUS;
 
     boolean boundary = nearBoundary(pop, time);
     if (boundary) score += BOUNDARY_BONUS;
@@ -601,9 +606,12 @@ public class WoodsmanPlayer implements Player {
     Stats target = universeState.get(dest.getId());
     int pop = target.getEstSize();
     //int effFleetSize = smashTargets.containsKey(dest.getId()) ? smashTargets.get(dest.getId()) + fleetSize : fleetSize;
-    score += Math.min(fleetSize - pop, 30);
+    score += Math.min(fleetSize - pop, 40);
 
-    if (target.getOwner() == 0) score += TARGET_BONUS * 2;
+    if (target.getOwner() == 0) {
+      score += TARGET_BONUS * 2;
+      if (dest.getSize().equals(Size.SMALL)) score += SMASH_BONUS;
+    }
     else if (neutralsOnly) return Double.NEGATIVE_INFINITY; // don't attack, we're only hunting neutrals;
 
     boolean boundary = nearBoundary(pop, time);
@@ -644,7 +652,9 @@ public class WoodsmanPlayer implements Player {
       score -= Universe.getTimeToTravel(source, dest);
       Integer distToEnemy = distanceFromEnemy.get(dest.getId());
       if (distToEnemy != null) {
-        score -= distToEnemy;
+        distToEnemy -= 10;
+        if (distToEnemy > 0) score += (distToEnemy * distToEnemy);
+        else score -= distToEnemy;
       } else {
         score -= MAX_DISTANCE;
       }
