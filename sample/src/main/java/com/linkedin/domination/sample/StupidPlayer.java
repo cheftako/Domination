@@ -31,8 +31,21 @@ public class StupidPlayer implements Player
         List<Planet> targets = getTargetPlanetsForPerson(universe, largestEnemy(universe));
 
         List<Move> myMoves = new ArrayList<Move>(myPlanets.size());
+      Set<Planet> underAttack = new HashSet<Planet>();
+      for (Event e : events) {
+        if (e.getEventType() == Event.EventType.LAUNCH && e.getFleetOwner() != me) {
+          Planet destination = universe.getPlanetMap().get(e.getToPlanet());
+          if (destination.getOwner() == me) {
+            // Someone is attacking me, the jerk!
+            Move attack = new Move(destination, universe.getPlanetMap().get(e.getFromPlanet()), Move.FleetType.RAIDING);
+            myMoves.add(attack);
+            underAttack.add(destination);
+
+          }
+        }
+      }
         for(Planet planet : myPlanets) {
-            if(planet.getSize().equals(Size.LARGE))
+            if(planet.getSize().equals(Size.LARGE) && !underAttack.contains(planet))
             {
                 Move attack = new Move(planet, getClosestPlanet(planet, targets), Move.FleetType.RAIDING);
                 myMoves.add(attack);
