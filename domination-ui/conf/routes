@@ -1,0 +1,36 @@
+# Routes
+# This file defines all application routes (Higher priority routes first)
+# ~~~~
+
+# Home page
+GET     /                           controllers.Application.userMain()
+
+# Domination Application Routes
+GET     /login                      controllers.Application.login()
+POST    /login                      controllers.Application.authenticate()
+GET     /adminLogin                 controllers.Application.adminLogin()
+POST    /adminLogin                 controllers.Application.adminAuthenticate()
+GET     /logout                     controllers.Application.logout()
+GET     /signup                     controllers.Application.signup()
+POST    /signup                     controllers.Application.newUser()
+
+GET     /userMain                   controllers.Application.userMain()
+GET     /uploadImage                controllers.Application.uploadImagePage()
+POST    /uploadImage                controllers.Application.uploadImage()
+GET     /image/:name                controllers.Application.image(name: String)
+GET     /images/*file               controllers.Assets.at(path="/storage/images", file)
+
+GET     /uploadJar                  controllers.Application.uploadJarPage()
+POST    /uploadJar                  controllers.Application.uploadJar()
+
+POST    /view/:id                   controllers.Application.viewGame(id: Long)
+
+GET     /users                      controllers.Application.users()
+POST    /users                      controllers.Application.newUser()
+POST    /users/:id/delete           controllers.Application.deleteUser(id: Long)
+
+# Legacy application stuff from the start-up application - Should be gotten rid off.
+# Map static resources from the /public folder to the /assets URL path
+GET     /assets/*file               controllers.Assets.at(path="/public/stylesheets", file)
+GET     /assets/*file               controllers.Assets.at(path="/public/images", file)
+GET     /assets/*file               controllers.Assets.at(path="/public/javascripts", file)

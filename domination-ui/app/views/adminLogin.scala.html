@@ -1,0 +1,15 @@
+@(form: Form[Application.AdminLogin])
+
+@helper.form(routes.Application.adminAuthenticate) {
+<h1>Admin Sign in</h1>
+
+<p>
+    <input type="text" name="username" placeholder="UserName" value="@form("username").value">
+</p>
+<p>
+    <input type="password" name="password" placeholder="Password">
+</p>
+<p>
+    <button type="submit">Login</button>
+</p>
+}

@@ -1,0 +1,22 @@
+@(user: User)
+
+@import helper._
+
+@main("Todo list") {
+
+@if(user != null) {
+<h1>Hello @user.name</h1>
+} else {
+<h1>Hello unrecognized user</h1>
+}
+
+@if(user != null) {
+<image src="@routes.Application.image(user.name)"></image>
+} else {
+}
+
+<li><a href="@routes.Application.uploadImage()">Upload Image</a></li>
+
+<li><a href="@routes.Application.uploadJar()">Upload Artificial Intelligence</a></li>
+
+}

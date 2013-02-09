@@ -1,0 +1,21 @@
+@(user: User)
+
+@import helper._
+
+@main("Todo Jar file name") {
+
+<h1>Hello @user.name</h1>
+
+<image src="@routes.Assets.at("/storage/images", "cowardly-lion.jpg")"></image>
+
+@form(action = routes.Application.uploadJar, 'enctype -> "multipart/form-data") {
+
+<input type="file" name="jar">
+
+<p>
+    <input type="submit">
+</p>
+
+}
+
+}
