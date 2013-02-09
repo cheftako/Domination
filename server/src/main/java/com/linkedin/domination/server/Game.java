@@ -420,11 +420,11 @@ public class Game {
     private List<Fleet> getFleetsForPlayer(Player player, List<Move> moves)
     {
         List<Fleet> playerFleets = new ArrayList<Fleet>(moves.size());
+        Set<Integer> originPlanets = new TreeSet<Integer>();
 
         for(Move move : moves)
         {
-            // TODO: Should remove moves that involve duplicate origin planets
-            if(moveValidForPlayer(player, move))
+            if(moveValidForPlayer(player, move) && !originPlanets.contains(move.getFromPlanet()))
             {
                 int fleetSize = getFleetSize(move);
                 if (fleetSize > 0)
@@ -440,6 +440,7 @@ public class Game {
                     Planet updatedOrigin = makePlanetWithNewOwnerAndSize(origin, origin.getOwner(), origin.getPopulation() - fleetSize);
                     updatePlanet(updatedOrigin);
                     playerFleets.add(fleet);
+                    originPlanets.add(updatedOrigin.getId());
                 }
             }
         }

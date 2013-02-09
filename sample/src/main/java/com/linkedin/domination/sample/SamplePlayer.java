@@ -15,9 +15,9 @@ public class SamplePlayer implements Player
     private List<Integer> _flee = new ArrayList<Integer>();
 
     private static final Integer EARLY_MIN_LAUNCH_SIZE = 36;
-    private static final Integer EARLY_LAUNCH_TURN = 100;
+    private static final Integer EARLY_LAUNCH_TURN = 60;
     private static final Integer MID_MIN_LAUNCH_SIZE = 80;
-    private static final Integer MID_LAUNCH_TURN = 200;
+    private static final Integer MID_LAUNCH_TURN = 150;
     private static final Integer LATE_MIN_LAUNCH_SIZE = 120;
 
     private int turn = 0;
