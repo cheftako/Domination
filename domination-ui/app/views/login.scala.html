@@ -1,5 +1,7 @@
 @(form: Form[Application.Login])
 
+@main("Domination Login") {
+
 @helper.form(routes.Application.authenticate) {
 <h1>Sign in</h1>
 
@@ -15,3 +17,5 @@
 }
 
 <li><a href="@routes.Application.signup()">Signup</a></li>
+
+}

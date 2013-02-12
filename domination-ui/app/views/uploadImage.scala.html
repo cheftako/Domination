@@ -2,11 +2,18 @@
 
 @import helper._
 
-@main("Todo list") {
+@main("Domination Upload Image") {
 
+@if(user != null) {
 <h1>Hello @user.name</h1>
+} else {
+<h1>Hello unrecognized user</h1>
+}
 
-<image src="@routes.Assets.at("/storage/images", "cowardly-lion.jpg")"></image>
+@if(user != null) {
+<image src="@routes.Application.image(user.name)"></image>
+} else {
+}
 
 @form(action = routes.Application.uploadImage, 'enctype -> "multipart/form-data") {
 

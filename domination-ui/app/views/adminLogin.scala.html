@@ -1,5 +1,7 @@
 @(form: Form[Application.AdminLogin])
 
+@main("Domination Admin Login") {
+
 @helper.form(routes.Application.adminAuthenticate) {
 <h1>Admin Sign in</h1>
 
@@ -12,4 +14,6 @@
 <p>
     <button type="submit">Login</button>
 </p>
+}
+
 }

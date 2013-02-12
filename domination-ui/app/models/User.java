@@ -29,6 +29,8 @@ public class User extends Model {
 
     public String description;
 
+    public Integer jarVersion;
+
     public static Finder<Long, User> find = new Finder(
         Long.class, User.class
     );
@@ -38,6 +40,7 @@ public class User extends Model {
     }
 
     public static void create(User user) {
+        user.jarVersion = 0;
         user.save();
     }
 

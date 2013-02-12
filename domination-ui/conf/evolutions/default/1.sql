@@ -9,6 +9,7 @@ create table user (
   password                  varchar(255),
   team                      varchar(255),
   description               varchar(255),
+  jar_version               integer,
   constraint pk_user primary key (id))
 ;
 

@@ -2,6 +2,8 @@
 
 @import helper._
 
+@main("Domination User Sign-Up") {
+
 <h2>Add a new user</h2>
 
 @form(routes.Application.newUser()) {
@@ -15,5 +17,7 @@
 @inputText(userForm("description"))
 
 <input type="submit" value="Create">
+
+}
 
 }
