@@ -2,250 +2,124 @@ package com.linkedin.domination.sample;
 
 import com.linkedin.domination.api.*;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
+/**
+ * This is a dumb AI.
+ */
 public class SamplePlayer implements Player
 {
-    private Integer _me = null;
+    private int me;
 
-    private List<Integer> _targets = new ArrayList<Integer>();
-    private List<Integer> _flee = new ArrayList<Integer>();
-
-    private static final Integer EARLY_MIN_LAUNCH_SIZE = 36;
-    private static final Integer EARLY_LAUNCH_TURN = 60;
-    private static final Integer MID_MIN_LAUNCH_SIZE = 80;
-    private static final Integer MID_LAUNCH_TURN = 150;
-    private static final Integer LATE_MIN_LAUNCH_SIZE = 120;
-
-    private int turn = 0;
-
-    public SamplePlayer()
-    {
-        // Nothing to be done yet.
+    public SamplePlayer() {
+        me = 0;
     }
 
     @Override
     public String getPlayerName() {
-        return "Cowardly Lion";
+        return "Scarecrow";
     }
 
     @Override
-    public void initialize(Integer playerNbr)
-    {
-        _me = playerNbr;
+    public void initialize(Integer playerNbr) {
+        me = playerNbr;
     }
 
     @Override
-    public List<Move> makeMove(Universe universe, List<Event> events)
-    {
-        // Dumb API - launch when any planet can do a RAID move and remain a large planet.
-        // We also flee like frightened children (HORDE) any incoming battle we do not KNOW we can beat.
-        List<Move> result = new ArrayList<Move>();
-        Map<Integer, Planet> planetMap = universe.getPlanetMap();
+    public List<Move> makeMove(Universe universe, List<Event> events) {
+        List<Planet> myPlanets = getMyPlanets(universe);
+        List<Planet> targets = getTargetPlanetsForPerson(universe, largestEnemy(universe));
 
-        for (Event event : events)
-        {
-            Integer targetId = event.getToPlanet();
-            Planet target = planetMap.get(targetId);
-            if (event.getEventType() == com.linkedin.domination.api.Event.EventType.LANDING)
+        List<Move> myMoves = new ArrayList<Move>(myPlanets.size());
+      Set<Planet> underAttack = new HashSet<Planet>();
+      for (Event e : events) {
+        if (e.getEventType() == Event.EventType.LAUNCH && e.getFleetOwner() != me) {
+          Planet destination = universe.getPlanetMap().get(e.getToPlanet());
+          if (destination.getOwner() == me) {
+            // Someone is attacking me, the jerk!
+            Move attack = new Move(destination, universe.getPlanetMap().get(e.getFromPlanet()), Move.FleetType.RAIDING);
+            myMoves.add(attack);
+            underAttack.add(destination);
+
+          }
+        }
+      }
+        for(Planet planet : myPlanets) {
+            if(planet.getSize().equals(Size.LARGE) && !underAttack.contains(planet))
             {
-                // This client isn't bright enough to worry about this.
-                // Just check to see if its a recent landing of ours.
-                if (event.getFleetOwner() == _me)
-                {
-                    if (_targets.contains(targetId))
-                    {
-                        _targets.remove(targetId);
-                    }
-                    if (planetHasOrders(result, targetId))
-                    {
-                        continue;
-                    }
-                    if (target.getOwner() == _me)
-                    {
-                        // Recent conquest so check its safe and clear any state
-                        if (_flee.contains(targetId))
-                        {
-                            Integer newHome = getTarget(universe, target, result, Move.FleetType.HORDE, true);
-                            _flee.remove(targetId);
-                            if (newHome != null)
-                            {
-                                Move flee = new Move(targetId, newHome, Move.FleetType.HORDE);
-                                result.add(flee);
-                                _targets.add(newHome);
-                            }
-                        }
-                    }
-                }
-                continue;
-            }
-            if (planetHasOrders(result, targetId))
-            {
-                continue;
-            }
-            if (event.getFleetOwner() == _me)
-            {
-                // Ignoring
-                continue;
-            }
-            // Am I the target?
-            if (_targets.contains(targetId) && event.getFleetSize() == Size.LARGE)
-            {
-                _flee.add(targetId);
-                continue;
-            }
-            if (target.getOwner() == _me && isFleetLarger(event.getFleetSize(), target.getSize()))
-            {
-                Integer newHome = getTarget(universe, target, result, Move.FleetType.HORDE, true);
-                if (newHome != null)
-                {
-                    Move flee = new Move(targetId, newHome, Move.FleetType.HORDE);
-                    result.add(flee);
-                    _targets.add(newHome);
-                }
+                Move attack = new Move(planet, getClosestPlanet(planet, targets), Move.FleetType.RAIDING);
+                myMoves.add(attack);
             }
         }
 
-        Collection<Planet> planets = universe.getPlanets();
-        for (Planet source : planets)
-        {
-            if (source.getOwner() != _me)
-            {
-                continue;
-            }
-            if (planetHasOrders(result, source.getId()))
-            {
-                continue;
-            }
-            if ((turn < EARLY_LAUNCH_TURN && source.getPopulation() >= EARLY_MIN_LAUNCH_SIZE) ||
-                (turn < MID_LAUNCH_TURN && source.getPopulation() >= MID_MIN_LAUNCH_SIZE) ||
-                (source.getPopulation() >= LATE_MIN_LAUNCH_SIZE))
-            {
-                Integer target = getTarget(universe, source, result, Move.FleetType.RAIDING, true);
-                if (target != null)
-                {
-                    Move attack = new Move(source.getId(), target, Move.FleetType.RAIDING);
-                    result.add(attack);
-                    _targets.add(target);
-                }
-            }
-        }
-
-        turn++;
-        return result;
+        return myMoves;
     }
 
-    private Integer getTarget(Universe universe, Planet source, List<Move> orders, Move.FleetType size, boolean respectOrders)
+    private Planet getClosestPlanet(Planet ideal, Collection<Planet> planets)
     {
-        Integer current = null;
-        Integer distance = Integer.MAX_VALUE;
-        Collection<Planet> planets = universe.getPlanets();
-        for (Planet option : planets)
+        Planet closest = null;
+        int nearestDistance = Integer.MAX_VALUE;
+
+        for(Planet planet : planets)
         {
-            if (option.getOwner() == _me)
+            int distanceFromIdeal = Universe.getTimeToTravel(planet, ideal);
+            if (distanceFromIdeal < nearestDistance)
             {
-                continue;
-            }
-            if (_targets.contains(option.getId()))
-            {
-                continue;
-            }
-            if (respectOrders && planetHasOrders(orders, option.getId()))
-            {
-                continue;
-            }
-            // We have found a viable target, now lets find the closest.
-            Integer optionDistance = universe.getTimeToTravel(source, option);
-            Size fleetSize = source.getSize();
-            if (size == Move.FleetType.RAIDING)
-            {
-                if (source.getPopulation() >= 100)
-                {
-                    fleetSize = Size.LARGE;
-                }
-                else if (source.getPopulation() >= 40)
-                {
-                    fleetSize = Size.MEDIUM;
-                }
-                else
-                {
-                    fleetSize = Size.SMALL;
-                }
-            }
-            if (isFleetLarger(option.getSize(), fleetSize))
-            {
-                continue;
-            }
-            if (optionDistance < distance)
-            {
-                current = option.getId();
-                distance = optionDistance;
+                nearestDistance = distanceFromIdeal;
+                closest = planet;
             }
         }
-        if (respectOrders && current == null)
-        {
-            _targets.clear();
-            current = getTarget(universe, source, orders, size, false);
-        }
-        if (current == null)
-        {
-            // Time to play the cowardly lion.
-            for (Planet option : planets)
-            {
-                if (option.getOwner() != _me)
-                {
-                    continue;
-                }
-                if (source == option)
-                {
-                    continue;
-                }
-                // We have found a viable target, now lets find the closest.
-                Integer optionDistance = universe.getTimeToTravel(source, option);
-                if (optionDistance < distance)
-                {
-                    current = option.getId();
-                    distance = optionDistance;
-                }
-            }
-        }
-        return current;
+
+        return closest;
     }
 
-    private boolean planetHasOrders(List<Move> orders, Integer planetId)
+    private List<Planet> getTargetPlanetsForPerson(Universe universe, int target)
     {
-        for (Move order : orders)
+        List<Planet> targetPlanets = new ArrayList<Planet>();
+        for(Planet planet : universe.getPlanets())
         {
-            if (order.getToPlanet() == planetId)
+            if (planet.getOwner() == target)
             {
-                return true;
+                targetPlanets.add(planet);
             }
         }
-        return false;
+        return targetPlanets;
     }
 
-    private boolean isFleetLarger(Size enemy, Size friendly)
+    private int largestEnemy(Universe universe)
     {
-        switch(friendly)
+        Map<Integer, Integer> counts = new HashMap<Integer, Integer>();
+        for(Planet planet : universe.getPlanets())
         {
-            case LARGE:
-                return false;
-            case MEDIUM:
-                if (enemy == Size.LARGE)
-                {
-                    return true;
-                }
-                return false;
-            case SMALL:
-                if (enemy == Size.LARGE || enemy == Size.MEDIUM)
-                {
-                    return true;
-                }
-                return false;
+            int owner = planet.getOwner();
+            if (owner != me)
+            {
+                int currentCount = counts.containsKey(owner) ? counts.get(owner) : 0;
+                counts.put(owner, currentCount + 1);
+            }
         }
-        return true;
+        int max = Integer.MIN_VALUE;
+        int biggestOwner = 0;
+        for(int key : counts.keySet())
+        {
+            if (counts.get(key) > max)
+            {
+                max = counts.get(key);
+                biggestOwner = key;
+            }
+        }
+        return biggestOwner;
+    }
+
+    private List<Planet> getMyPlanets(Universe universe) {
+        List<Planet> myPlanets = new ArrayList<Planet>();
+        for(Planet planet : universe.getPlanets())
+        {
+            if (planet.getOwner() == me)
+            {
+                myPlanets.add(planet);
+            }
+        }
+        return myPlanets;
     }
 }
