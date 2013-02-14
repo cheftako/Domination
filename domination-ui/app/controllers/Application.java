@@ -1,5 +1,7 @@
 package controllers;
 
+import business.GameController;
+import com.linkedin.domination.api.Player;
 import models.User;
 import play.api.libs.MimeTypes;
 import play.api.libs.iteratee.Enumerator;
@@ -176,7 +178,7 @@ public class Application extends Controller {
             String contentType = jar.getContentType();
             File file = jar.getFile();
             try {
-                if (isValidJar(file))
+                if (GameController.isValidJar(file))
                 {
                     FileInputStream fis = new FileInputStream(file);
                     File savedFile = new File(JAR_FILE_LOCATION + file.separator + username + '_' + user.jarVersion + ".jar");
@@ -204,71 +206,39 @@ public class Application extends Controller {
         }
     }
 
-    private static boolean isValidJar(File jarFile) throws IOException
+    @Security.Authenticated(Secured.class)
+    public static Result runGame()
     {
-        URL url = jarFile.toURL();
-        //File gameApiJar = new File("lib/game-api.jar");
-        URL[] urls = new URL[]{url /*, gameApiJar.toURL() */};
-        ClassLoader playerLoader = new URLClassLoader(urls, Application.class.getClassLoader());
-
-        Class<?> playerClass = null;
-        JarFile playerJar = new JarFile(jarFile);
-        Enumeration<JarEntry> entries = playerJar.entries();
-
-        while (entries.hasMoreElements())
+        try
         {
-            JarEntry entry = entries.nextElement();
+            Class oneClass = GameController.getPlayerClass(new File("storage/jars/lion.jar"));
+            Player one = (Player)oneClass.newInstance();
+            one.initialize(1);
 
-            String candidateClassName = entry.getName().replace('/', '.');
-            if (!candidateClassName.endsWith("class"))
-            {
-                continue;
-            }
+            Class twoClass = GameController.getPlayerClass(new File("storage/jars/sample.jar"));
+            Player two = (Player)twoClass.newInstance();
+            two.initialize(2);
 
-            candidateClassName = candidateClassName.substring(0, candidateClassName.length() - 6);
+            Class threeClass = GameController.getPlayerClass(new File("storage/jars/woodsman.jar"));
+            Player three = (Player)threeClass.newInstance();
+            three.initialize(3);
 
-            try
-            {
-                Class<?> candidate = playerLoader.loadClass(candidateClassName);
-
-                if (com.linkedin.domination.api.Player.class.isAssignableFrom(candidate))
-                {
-                    if (playerClass != null)
-                    {
-                        System.out.println("Found multiple player classes " + playerClass.getCanonicalName() + " and " + candidate.getCanonicalName());
-                        throw new IllegalStateException("Multiple org.linkedin.contest.game.player.Player classes found!");
-                    }
-                    playerClass = candidate;
-                }
-                else
-                {
-                    System.out.println(candidate.getName() + " is not an implementation of Player.");
-                }
-            }
-            catch (ClassNotFoundException cnfe)
-            {
-                // Ignore
-                cnfe.printStackTrace();
-                cnfe = null;
-            }
+            GameController.RunGame(one, two, three);
         }
-
-        return playerClass != null;
-    }
-
-    /*@Security.Authenticated(Secured.class)
-    public static Result userImage() {
-        InputStream pictureStream;
-        try {
-            pictureStream = new FileInputStream(new File("storage/images/cowardly-lion.jpg"));
-        }
-        catch (Exception e)
+        catch (IOException e)
         {
-            return TODO;
+            e.printStackTrace();
         }
-
+        catch (InstantiationException e)
+        {
+            e.printStackTrace();
+        }
+        catch (IllegalAccessException e)
+        {
+            e.printStackTrace();
+        }
+        return ok("We ran a game");
     }
-    */
 
     public static Result viewGame(Long id) {
         return TODO;

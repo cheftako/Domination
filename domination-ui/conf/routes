@@ -23,6 +23,7 @@ GET     /images/*file               controllers.Assets.at(path="/storage/images"
 GET     /uploadJar                  controllers.Application.uploadJarPage()
 POST    /uploadJar                  controllers.Application.uploadJar()
 
+GET     /runGame                    controllers.Application.runGame()
 POST    /view/:id                   controllers.Application.viewGame(id: Long)
 
 GET     /users                      controllers.Application.users()
