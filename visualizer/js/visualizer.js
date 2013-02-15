@@ -403,7 +403,7 @@ var TurnInfo = function(other) {
       var s0 = planet.ships;
       planet.ships -= fleet.ships;
       if (planet.ships < 0) showAlert(planet.ships + " ships on planet " + planet.id + ' at turn ' + self.number);
-      if (planet.ships < 0) planet.ships = 0;   // Try compensate for a bug on producer side
+      if (planet.ships < 1) planet.owner = 0;   // Player decided to send away all his ships on the planet
     });
     var arriving = [];
     self.fleets.forEach(function(fleet) {
