@@ -387,11 +387,11 @@ var TurnInfo = function(other) {
     return nextTurn;
   };
   self.consumeEvent = function(event) {
-    if (event.duration) {
+    if (event.duration !== undefined) {
       fleet = new FleetTurnInfo(event);
       fleet.id = fleetUniqueIdCounter++;
       self.departing.push(fleet);
-    } else {
+    } else if (event.planet !== undefined) {
       self.landing.push(event);
     }
   };
