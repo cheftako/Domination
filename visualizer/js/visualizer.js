@@ -388,9 +388,11 @@ var TurnInfo = function(other) {
   };
   self.consumeEvent = function(event) {
     if (event.duration !== undefined) {
-      fleet = new FleetTurnInfo(event);
-      fleet.id = fleetUniqueIdCounter++;
-      self.departing.push(fleet);
+      if (event.duration) {         // Ignore events sending ships to same planet, with duration == 0
+        fleet = new FleetTurnInfo(event);
+        fleet.id = fleetUniqueIdCounter++;
+        self.departing.push(fleet);
+      }
     } else if (event.planet !== undefined) {
       self.landing.push(event);
     }
