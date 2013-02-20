@@ -24,7 +24,7 @@ import java.util.jar.JarFile;
  */
 public class GameController
 {
-    public static void RunGame(Player playerOne, Player playerTwo, Player playerThree)
+    public static void RunGame(Player playerOne, Player playerTwo, Player playerThree, File jsonFile)
     {
         UniverseGenerator generator = new UniverseGenerator(60, 1000, 800, 40);
         Universe universe = generator.createUniverse();
@@ -36,7 +36,7 @@ public class GameController
         playerMap.put(2, playerTwo);
         playerMap.put(3, playerThree);
         List<Watcher> watchers = new ArrayList<Watcher>();
-        GameServerWatcher resultWatcher = new GameServerWatcher(new File("storage/json/sample.json"));
+        GameServerWatcher resultWatcher = new GameServerWatcher(jsonFile);
         watchers.add(resultWatcher);
         Game game = new Game(universe, playerMap, numberTurns, watchers);
         universe = game.start();

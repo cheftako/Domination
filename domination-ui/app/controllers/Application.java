@@ -2,6 +2,7 @@ package controllers;
 
 import business.GameController;
 import com.linkedin.domination.api.Player;
+import models.Game;
 import models.User;
 import play.api.libs.MimeTypes;
 import play.api.libs.iteratee.Enumerator;
@@ -22,12 +23,14 @@ import java.net.URL;
 import java.net.URLClassLoader;
 import java.sql.Date;
 import java.util.Enumeration;
+import java.util.List;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 
-public class Application extends Controller {
-
+public class Application extends Controller
+{
     static Form<User> userForm = form(User.class);
+    static Form<Game> gameForm = form(Game.class);
 
     private static final String IMAGE_FILE_LOCATION = "storage/images";
     private static final String JAR_FILE_LOCATION = "storage/jars";
@@ -181,9 +184,11 @@ public class Application extends Controller {
                 if (GameController.isValidJar(file))
                 {
                     FileInputStream fis = new FileInputStream(file);
-                    File savedFile = new File(JAR_FILE_LOCATION + file.separator + username + '_' + user.jarVersion + ".jar");
+                    user.jarVersion++;
+                    File savedFile = new File(getFileName(user));
                     FileOutputStream fos = new FileOutputStream(savedFile);
                     FileUtils.copy(fis, fos);
+                    user.save();
                 }
                 else
                 {
@@ -207,23 +212,43 @@ public class Application extends Controller {
     }
 
     @Security.Authenticated(Secured.class)
-    public static Result runGame()
+    public static Result setupGame()
     {
+        String username = session().get("username");
+        User user = User.getUserByName(username);
+        List<User> eligibleUsers = User.getEligibleUsers();
+        System.out.println("We have " + eligibleUsers.size() + " eligible users");
+        return ok(
+                views.html.setupGame.render(user, eligibleUsers, gameForm)
+        );
+    }
+
+    @Security.Authenticated(Secured.class)
+    public static Result startGame() {
+        String username = session().get("username");
+        User first = User.getUserByName(username);
+        Form<Game> filledForm = gameForm.bindFromRequest();
+        Game game = filledForm.get();
+        User second = User.getUserById(game.second);
+        User third = User.getUserById(game.third);
         try
         {
-            Class oneClass = GameController.getPlayerClass(new File("storage/jars/lion.jar"));
+            Class oneClass = GameController.getPlayerClass(new File(getFileName(first)));
             Player one = (Player)oneClass.newInstance();
             one.initialize(1);
 
-            Class twoClass = GameController.getPlayerClass(new File("storage/jars/sample.jar"));
+            Class twoClass = GameController.getPlayerClass(new File(getFileName(second)));
             Player two = (Player)twoClass.newInstance();
             two.initialize(2);
 
-            Class threeClass = GameController.getPlayerClass(new File("storage/jars/woodsman.jar"));
+            Class threeClass = GameController.getPlayerClass(new File(getFileName(third)));
             Player three = (Player)threeClass.newInstance();
             three.initialize(3);
 
-            GameController.RunGame(one, two, three);
+            String filename = "sample/json/normal_" + game.id + ":" + first.id + ":" + second.id + ":" + third.id + ".json";
+            game.jsonFile = filename;
+            GameController.RunGame(one, two, three, new File(filename));
+            game.save();
         }
         catch (IOException e)
         {
@@ -272,6 +297,13 @@ public class Application extends Controller {
             }
             return null;
         }
+    }
+
+    private static String getFileName(User user)
+    {
+        String username = user.name;
+        Integer jarVersion = user.jarVersion;
+        return JAR_FILE_LOCATION + File.separator + username + '_' + jarVersion + ".jar";
     }
 
     public static class AdminLogin {

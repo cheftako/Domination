@@ -1,0 +1,31 @@
+@(user: User, eligibleUsers: List[User], gameForm: Form[Game])
+
+@import helper._
+
+@main("Domination Setup Game") {
+
+@if(user != null) {
+<h1>Hello @user.name</h1>
+} else {
+<h1>Hello unrecognized user</h1>
+}
+
+@if(user != null) {
+<image src="@routes.Application.image(user.name)"></image>
+} else {
+}
+
+@helper.form(action = routes.Application.startGame()) {
+<ul>
+    @for(eligibleUser <- eligibleUsers) {
+    <li>@eligibleUser.name : @eligibleUser.team
+        <input type="radio" name="second" value="@eligibleUser.id"> Second Player
+        <input type="radio" name="third" value="@eligibleUser.id"> Third Player
+    </li>
+    }
+    <input type="submit" value="Start Game">
+</ul>
+
+}
+
+}

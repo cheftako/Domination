@@ -53,6 +53,20 @@ public class User extends Model {
         return find.where().eq("name", username).findUnique();
     }
 
+    public static User getUserById(Long id) {
+        return find.byId(id);
+    }
+
+    public static List<User> getUsers()
+    {
+        return find.all();
+    }
+
+    public static List<User> getEligibleUsers()
+    {
+        return find.where().ge("jarVersion", 1).findList();
+    }
+
     public static boolean authenticate(String name, String password)
     {
         User user = getUserByName(name);
