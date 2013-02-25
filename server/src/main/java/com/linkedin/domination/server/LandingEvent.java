@@ -64,6 +64,11 @@ public class LandingEvent implements Event {
         return _shipSentCount;
     }
 
+  public List<Integer> getPlayersInvolved() {
+    return _playersInvolved;
+  }
+
+
     @Override
     public int getAfterBattleShipCount() {
         return _shipRemainingCount;
