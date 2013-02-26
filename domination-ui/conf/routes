@@ -24,13 +24,13 @@ GET     /uploadJar                  controllers.Application.uploadJarPage()
 POST    /uploadJar                  controllers.Application.uploadJar()
 
 GET     /setupGame                  controllers.Application.setupGame()
-GET     /runGame                    controllers.Application.runGame()
+# GET     /runGame                    controllers.Application.runGame()
 POST    /startGame                  controllers.Application.startGame()
-POST    /view/:id                   controllers.Application.viewGame(id: Long)
+POST    /view/:id                   controllers.Application.viewGame(id: String)
 
 GET     /users                      controllers.Application.users()
 POST    /users                      controllers.Application.newUser()
-POST    /users/:id/delete           controllers.Application.deleteUser(id: Long)
+POST    /users/:id/delete           controllers.Application.deleteUser(id: String)
 
 # Legacy application stuff from the start-up application - Should be gotten rid off.
 # Map static resources from the /public folder to the /assets URL path

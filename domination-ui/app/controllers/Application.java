@@ -109,9 +109,10 @@ public class Application extends Controller
     public static Result userMain() {
         String username = session().get("username");
         User user = User.getUserByName(username);
+        List<Game> games = Game.all();
         System.out.println("Got a user object of " + user + " when using the name " + username);
         return ok(
-                views.html.userMain.render(user)
+                views.html.userMain.render(user, games)
         );
     }
 
@@ -245,9 +246,12 @@ public class Application extends Controller
             Player three = (Player)threeClass.newInstance();
             three.initialize(3);
 
-            String filename = "sample/json/normal_" + game.id + ":" + first.id + ":" + second.id + ":" + third.id + ".json";
+            String filename = "storage/json/normal_" + first.name + "_" + second.name + "_" + third.name + "_" + System.currentTimeMillis() + ".json";
+            System.out.println("Running a game and capturing result in " + filename);
             game.jsonFile = filename;
-            GameController.RunGame(one, two, three, new File(filename));
+            File capture = new File(filename);
+            capture.createNewFile();
+            GameController.RunGame(one, two, three, capture);
             game.save();
         }
         catch (IOException e)
@@ -265,11 +269,11 @@ public class Application extends Controller
         return ok("We ran a game");
     }
 
-    public static Result viewGame(Long id) {
+    public static Result viewGame(String id) {
         return TODO;
     }
 
-    public static Result deleteUser(Long id) {
+    public static Result deleteUser(String id) {
         User.delete(id);
         return redirect(routes.Application.users());
     }

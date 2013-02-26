@@ -1,4 +1,4 @@
-@(user: User)
+@(user: User, games: List[Game])
 
 @import helper._
 
@@ -20,5 +20,13 @@
 <li><a href="@routes.Application.uploadJar()">Upload Artificial Intelligence</a></li>
 
 <li><a href="@routes.Application.setupGame()">Start a new Game</a></li>
+
+@if(games != null) {
+    <ul>
+        @for(game <- games) {
+        <li>@game.id : @game.jsonFile</li>
+        }
+    </ul>
+}
 
 }
