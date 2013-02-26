@@ -53,12 +53,19 @@ public class Game {
             List<Event> thisTurnEvents = new ArrayList<Event>();
             Map<Planet, List<Fleet>> conflictMap = new HashMap<Planet, List<Fleet>>();
 
+          Map<Integer, List<Move>> movesPerPlayer = new HashMap<Integer, List<Move>>(_players.size());
+
             // Get user commands
             for(Player player : _players.values())
             {
                 Universe playerUniverse = makeUniverseForPlayer(_playerIds.get(player));
-                // TODO: lastTurnEvents should be curated per player
-                List<Move> playerMoves = player.makeMove(playerUniverse, lastTurnEvents);
+                List<Event> eventsForPlayer = makeEventListForPlayer(lastTurnEvents, _playerIds.get(player));
+                List<Move> playerMoves = player.makeMove(playerUniverse, eventsForPlayer);
+              movesPerPlayer.put(_playerIds.get(player), playerMoves);
+            }
+            // second loop after all moves have been gathered
+            for (Player player : _players.values()) {
+                List<Move> playerMoves = movesPerPlayer.get(_playerIds.get(player));
                 List<Fleet> playerFleets = getFleetsForPlayer(player, playerMoves);
                 _currentFleets.addAll(playerFleets);
                 List<Event> playerEvents = getEventsForFleets(playerFleets);
@@ -197,6 +204,34 @@ public class Game {
 
         return new Universe(Collections.unmodifiableMap(planets));
     }
+
+  private List<Event> makeEventListForPlayer(List<Event> events, Integer playerId) {
+    List<Event> curated = new ArrayList<Event>(events.size()); // Allocate all of the memory!
+    for (Event e : events) {
+      if (e instanceof LandingEvent) {
+        LandingEvent landing = (LandingEvent) e;
+        List<Integer> involved = landing.getPlayersInvolved();
+        curated.add(new LandingEvent(
+                landing.getFromPlanet(),
+                landing.getToPlanet(),
+                landing.getFleetSize(),
+                involved.contains(playerId) ? landing.getSentShipCount() : -1,
+                involved.contains(playerId) ? landing.getAfterBattleShipCount() : -1,
+                involved,
+                landing.getFleetOwner()));
+      } else {
+        Integer involved = e.getFleetOwner(); // launch event
+        curated.add(new LaunchEvent(
+                e.getFromPlanet(),
+                e.getToPlanet(),
+                e.getFleetSize(),
+                e.getFleetOwner(),
+                involved.equals(playerId) ? e.getSentShipCount() : -1,
+                involved.equals(playerId) ? e.getAfterBattleShipCount() : -1));
+      }
+    }
+    return curated;
+  }
 
     private boolean isOver()
     {
