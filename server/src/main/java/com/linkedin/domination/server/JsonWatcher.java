@@ -22,8 +22,11 @@ public class JsonWatcher implements Watcher
     private Universe _universe;
     private Map<Integer, List<Event>> _turnEventMap = new HashMap<Integer, List<Event>>();
     private Map<Integer, Player> _players = new HashMap<Integer, Player>();
+    private Map<Integer, Integer> _lastAlive = new HashMap<Integer, Integer>();
+    private Map<Integer, Integer> _places = new HashMap<Integer, Integer>();
     private String _initialPlanetState;
     private int _lastTurn = 0;
+    private int _livePlayers = 3;
 
     public void setUniverse(Universe universe)
     {
@@ -42,6 +45,7 @@ public class JsonWatcher implements Watcher
         events.add(event);
         if (turn > _lastTurn)
         {
+            checkForDeadPlayers();
             _lastTurn = turn;
         }
     }
@@ -51,8 +55,24 @@ public class JsonWatcher implements Watcher
        _players.put(playerNbr, player);
     }
 
+    private void checkForDeadPlayers() {
+      Map<Integer, Boolean> isDead = new HashMap<Integer, Boolean>();
+      for (Planet p : _universe.getPlanets()) {
+        isDead.put(p.getOwner(), false);
+      }
+      for (Integer i : _players.keySet()) {
+        if (isDead.get(i) == null && !_lastAlive.containsKey(i)) {
+          // They are dead, but weren't before
+          _lastAlive.put(i, _lastTurn);
+          _places.put(i, _livePlayers);
+          _livePlayers -= 1;
+        }
+      }
+    }
+
     public void gameOver()
     {
+        checkForDeadPlayers();
         System.out.println("{");
         printPlayers();
         printPlanets();
@@ -65,7 +85,11 @@ public class JsonWatcher implements Watcher
         System.out.println(quote("players") + ": [");
         for (Integer playerId : _players.keySet())
         {
-            System.out.println("  {\"id\": " + playerId + ", \"name\": " + quote(_players.get(playerId).getPlayerName()) + "},");
+            Integer place = _places.containsKey(playerId) ? _places.get(playerId) : 1;
+            System.out.println("  {\"id\": " + playerId +
+                    ", \"name\": " + quote(_players.get(playerId).getPlayerName()) +
+                    ", \"place\": " + quote(place.toString()) +
+                    "},");
         }
         System.out.println("],");
     }

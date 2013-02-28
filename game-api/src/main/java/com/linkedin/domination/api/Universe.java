@@ -36,7 +36,7 @@ public class Universe
 
     public static int getTimeToTravel(Planet first, Planet second)
     {
-        return roundToNextTen(getPlanetDistance(first, second));
+        return roundToNextTen(getPlanetDistance(first, second)) -1; // -1 because the fleet travels the turn it launches as well
     }
 
     private static int roundToNextTen(double c)
