@@ -10,6 +10,7 @@ var $v = require('gamejs/utils/vectors');
 
 // Globals
 var director = new Director(30);
+var gameScene = null;
 var currentGameReplay = null;     // Current game replay shown
 var fleetUniqueIdCounter = 0;
 var numberOfAlertsShown = 0;
@@ -24,6 +25,62 @@ var fleetColors = { 1: 'rgba(255, 0, 255, 0.2)', 2: 'rgba(0, 255, 255, 0.2)', 3:
 var gameFont = new gamejs.font.Font("14px Verdana");
 var playerNameFont = new gamejs.font.Font("18px Verdana");
 var fleetFont = new gamejs.font.Font("10px Verdana");
+
+/*
+ * UI
+ */
+
+var Button = function(rect, onClick) {
+  var self = this;
+  Button.superConstructor.apply(self, arguments);
+  self.text = null;
+  self.image = null;
+  self.textColor = '#000';
+  self.bgColor = '#fff';
+  self.font = new gamejs.font.Font("20px Times");
+  self.onClick = onClick;
+  self.rect = new gamejs.Rect(rect);
+  self.enabled = true;
+  self.hovered = false;
+  self.mousePressed = false;
+  self.handleEvent = function(event) {
+    if (event.type == gamejs.event.MOUSE_DOWN) {
+      self.mousePressed = self.hovered;
+    } else if (event.type == gamejs.event.MOUSE_MOTION) {
+      self.hovered = self.rect.collidePoint(event.pos);
+    } else if (event.type == gamejs.event.MOUSE_UP) {
+      if (self.mousePressed && self.hovered && self.enabled && self.onClick) {
+        self.onClick();
+      }
+      self.mousePressed = false;
+    }
+  };
+  self.update = function(msDuration) {
+  };
+  self.draw = function(surface) {
+    gamejs.draw.rect(surface, self.bgColor, self.rect, 0);
+    if (self.image) {
+      var img = gamejs.image.load(self.image);
+      surface.blit(img, centeredPosition(self.rect, img.getSize()));
+    }
+    if (self.text) {
+      gamejs.draw.rect(surface, self.textColor, self.rect, 1);
+      textRender = self.font.render(self.text, self.textColor);
+      surface.blit(textRender, centeredPosition(self.rect, textRender.getSize()));
+    }
+    if (!self.enabled || !self.onClick) {
+      gamejs.draw.rect(surface, 'rgba(200, 200, 200, 0.2)', self.rect, 0);
+    } else if (self.hovered) {
+      if (self.mousePressed) {
+        gamejs.draw.rect(surface, 'rgba(0, 0, 220, 0.2)', self.rect, 0);
+      } else {
+        gamejs.draw.rect(surface, 'rgba(220, 220, 0, 0.2)', self.rect, 0);
+      }
+    }
+  };
+  return self;
+};
+gamejs.utils.objects.extend(Button, gamejs.sprite.Sprite);
 
 /*
  * PlayerSprite: Shows player name, color and current number of ships
@@ -463,11 +520,14 @@ var GameReplay = function() {
     self.error = null;
   };
   self.load = function(path, universe) {
+      var json = gamejs.http.load(path);
+      self.load_from_json(json, universe);
+  };
+  self.load_from_json = function(json, universe) {
     // Load game replay file, 'path' should be either an object or a path (file or http) to a json file
     self.reset();
     try {
       numberOfAlertsShown = 0;
-      var json = gamejs.http.load(path);
       self.maxShips = 0;
       fleetUniqueIdCounter = 1;
       json.players.forEach(function(player) {
@@ -540,7 +600,7 @@ var GameReplay = function() {
  * Main game scene
  */
 
-var GameScene = function() {
+function GameScene() {
   var self = this;
   // Settings
   self.bgColor = '#fff';
@@ -554,6 +614,13 @@ var GameScene = function() {
   self.load = function(path) {
     self.pause();
     currentGameReplay.load(path, self.universe);
+    if (!currentGameReplay.error) {
+      self.play();
+    }
+  };
+  self.load_from_json = function(json) {
+    self.pause();
+    currentGameReplay.load_from_json(json, self.universe);
     if (!currentGameReplay.error) {
       self.play();
     }
@@ -671,43 +738,7 @@ var GameScene = function() {
     }
   };
   return self;
-};
-
-/*
- * Simple title scene
- */
-
-var TitleScene = function(title) {
-  var self = this;
-  self.titleFont = new gamejs.font.Font("40px Verdana");
-  self.buttons = new gamejs.sprite.Group();
-  var startButton = new Button([350, 150, 100, 30], function() {
-    var gameScene = new GameScene();
-    director.push(gameScene);
-    gameScene.load("test-replay.json");
-
-  });
-  startButton.text = "Start";
-  self.buttons.add(startButton);
-  self.bgColor = null;
-  self.fgColor = '#7777ff';
-  self.title = title;
-  gamejs.display.setCaption(title);
-  self.handleEvent = function(event) {
-    self.buttons.forEach(function(btn) { btn.handleEvent(event); });
-  };
-  self.draw = function(surface) {
-    surface.fill(self.bgColor || '#fff');
-    var textRender = self.titleFont.render(self.title, self.fgColor);
-    var tw = textRender.getSize()[0];
-    var th = textRender.getSize()[1];
-    var x0 = (surface.getSize()[0] - tw) / 2;
-    gamejs.draw.line(surface, '#ff0000', [x0,th+4], [x0+tw,th+4], 2);    // surface, color, startPos, endPos, width
-    surface.blit(textRender, [x0, 0]);
-    self.buttons.draw(surface);
-  };
-  return self;
-};
+}
 
 /*
  * Scene director
@@ -757,62 +788,6 @@ function Director (fps) {
   gamejs.time.fpsCallback(tick, self, fps);
   return self;
 }
-
-/*
- * UI
- */
-
-var Button = function(rect, onClick) {
-  var self = this;
-  Button.superConstructor.apply(self, arguments);
-  self.text = null;
-  self.image = null;
-  self.textColor = '#000';
-  self.bgColor = '#fff';
-  self.font = new gamejs.font.Font("20px Times");
-  self.onClick = onClick;
-  self.rect = new gamejs.Rect(rect);
-  self.enabled = true;
-  self.hovered = false;
-  self.mousePressed = false;
-  self.handleEvent = function(event) {
-    if (event.type == gamejs.event.MOUSE_DOWN) {
-      self.mousePressed = self.hovered;
-    } else if (event.type == gamejs.event.MOUSE_MOTION) {
-      self.hovered = self.rect.collidePoint(event.pos);
-    } else if (event.type == gamejs.event.MOUSE_UP) {
-      if (self.mousePressed && self.hovered && self.enabled && self.onClick) {
-        self.onClick();
-      }
-      self.mousePressed = false;
-    }
-  };
-  self.update = function(msDuration) {
-  };
-  self.draw = function(surface) {
-    gamejs.draw.rect(surface, self.bgColor, self.rect, 0);
-    if (self.image) {
-      var img = gamejs.image.load(self.image);
-      surface.blit(img, centeredPosition(self.rect, img.getSize()));
-    }
-    if (self.text) {
-      gamejs.draw.rect(surface, self.textColor, self.rect, 1);
-      textRender = self.font.render(self.text, self.textColor);
-      surface.blit(textRender, centeredPosition(self.rect, textRender.getSize()));
-    }
-    if (!self.enabled || !self.onClick) {
-      gamejs.draw.rect(surface, 'rgba(200, 200, 200, 0.2)', self.rect, 0);
-    } else if (self.hovered) {
-      if (self.mousePressed) {
-        gamejs.draw.rect(surface, 'rgba(0, 0, 220, 0.2)', self.rect, 0);
-      } else {
-        gamejs.draw.rect(surface, 'rgba(220, 220, 0, 0.2)', self.rect, 0);
-      }
-    }
-  };
-  return self;
-};
-gamejs.utils.objects.extend(Button, gamejs.sprite.Sprite);
 
 /*
  * Helpers
@@ -902,9 +877,19 @@ function drawCenteredText(surface, rect, font, color, text) {
  * Main function
  */
 
+function load_game_from_path(path) {
+  gameScene.load(path);
+}
+
+function load_game_from_json(json) {
+  gameScene.load_from_json(json);
+}
+
 gamejs.ready(function () {
   canvasWidth = gamejs.display.getSurface().getSize()[0];
   canvasHeight = gamejs.display.getSurface().getSize()[1];
+  currentGameReplay = new GameReplay();
+  gameScene = new GameScene();
   // read URL parameters and store them in the parameters object
   var parameters = window.location.href;
   var path;
@@ -921,9 +906,6 @@ gamejs.ready(function () {
     }
   }
   if (!path) path = 'replay/test-replay.json';
-  //director.push(new TitleScene("Galactic Domination"));
-  currentGameReplay = new GameReplay();
-  var gameScene = new GameScene();
   director.push(gameScene);
   gameScene.load(path);
 });
