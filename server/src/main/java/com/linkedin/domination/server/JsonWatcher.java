@@ -57,6 +57,7 @@ public class JsonWatcher implements Watcher
 
     private void checkForDeadPlayers() {
       Map<Integer, Boolean> isDead = new HashMap<Integer, Boolean>();
+      int liveLastTurn = _livePlayers;
       for (Planet p : _universe.getPlanets()) {
         isDead.put(p.getOwner(), false);
       }
@@ -64,7 +65,7 @@ public class JsonWatcher implements Watcher
         if (isDead.get(i) == null && !_lastAlive.containsKey(i)) {
           // They are dead, but weren't before
           _lastAlive.put(i, _lastTurn);
-          _places.put(i, _livePlayers);
+          _places.put(i, liveLastTurn);
           _livePlayers -= 1;
         }
       }
@@ -82,6 +83,9 @@ public class JsonWatcher implements Watcher
 
     private void printPlayers()
     {
+      if (_places.size() < 2) {
+        fillPlacesByPlanets();
+      }
         System.out.println(quote("players") + ": [");
         for (Integer playerId : _players.keySet())
         {
@@ -92,6 +96,30 @@ public class JsonWatcher implements Watcher
                     "},");
         }
         System.out.println("],");
+    }
+
+    private void fillPlacesByPlanets() {
+      // The game ended but more than one person has planets. Fill in the places hash by number of planets owned
+      Map<Integer, Integer> planets = new HashMap<Integer, Integer>();
+      for (Planet p : _universe.getPlanets()) {
+        if (!planets.containsKey(p.getOwner()))
+          planets.put(p.getOwner(), 0);
+        planets.put(p.getOwner(), planets.get(p.getOwner()) + 1);
+      }
+      for (Integer player : planets.keySet()) {
+        if (!_places.containsKey(player)) {
+          int place = 1;
+          for (Integer opponent : planets.keySet()) {
+            if (!opponent.equals(player)) {
+              if (planets.get(opponent) > planets.get(player)) {
+                place += 1;
+              }
+            }
+          }
+          _places.put(player, place);
+        }
+      }
+
     }
 
     private String quote(String item)
