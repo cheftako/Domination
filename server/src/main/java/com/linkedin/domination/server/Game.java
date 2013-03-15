@@ -86,6 +86,11 @@ public class Game {
                         Planet friendlyPlanet = _universe.getPlanetMap().get(fleet.get_destination());
                         Planet updated = makePlanetWithNewOwnerAndSize(friendlyPlanet, fleet.getOwner(), friendlyPlanet.getPopulation() + fleet.getSize());
                         updatePlanet(updated);
+                        if (conflictMap.containsKey(friendlyPlanet)) {
+                        	List<Fleet> fl = conflictMap.get(friendlyPlanet);
+                        	conflictMap.remove(friendlyPlanet);
+                        	conflictMap.put(updated, fl);
+                        }
                         List<Integer> playersInvolved = new ArrayList<Integer>(1);
                         playersInvolved.add(fleet.getOwner());
                         Event reinforce = new LandingEvent(fleet.get_origin(),
